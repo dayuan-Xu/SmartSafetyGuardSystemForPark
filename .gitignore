@@ -1,0 +1,13 @@
+# 忽略特定文件夹
+./idea/
+.venv/
+datasets/
+runs/
+
+# 忽略特定文件
+*.log
+.env
+yolo11n.pt
+yolov8m.pt
+merge_datasets.py
+my_models.py
