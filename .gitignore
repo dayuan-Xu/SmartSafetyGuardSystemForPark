@@ -1,5 +1,5 @@
 # 忽略特定文件夹
-./idea/
+.idea/
 .venv/
 datasets/
 runs/
