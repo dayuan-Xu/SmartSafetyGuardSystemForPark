@@ -1,9 +1,85 @@
+from typing import List
 from sqlalchemy.orm import Session
 from app.JSON_schemas.Result_pydantic import Result
-from app.crud.camera_crud import delete_camera_infos as crud_delete_camera_infos
-
-
+from app.JSON_schemas.camera_info_pydantic import CameraInfoResponse, CameraInfoCreate, CameraInfoUpdate
+from app.crud.camera_crud import (
+    get_camera_info as crud_get_camera_info,
+    get_all_camera_infos as crud_get_all_camera_infos,
+    create_camera_info as crud_create_camera_info,
+    update_camera_info as crud_update_camera_info,
+    delete_camera_infos as crud_delete_camera_infos
+)
 class CameraInfoService:
+    @staticmethod
+    def get_camera_info(db: Session, camera_info_id: int) -> Result[CameraInfoResponse]:
+        """
+        获取单个摄像头信息
+
+        Args:
+            db: 数据库会话
+            camera_info_id: 摄像头信息ID
+
+        Returns:
+            Result[CameraInfoResponse]: 包含摄像头信息的响应对象
+        """
+        db_camera_info = crud_get_camera_info(db, camera_info_id)
+        if not db_camera_info:
+            return Result.ERROR(f"CameraInfo not found with given id={camera_info_id}")
+        return Result.SUCCESS(db_camera_info)
+
+    @staticmethod
+    def get_all_camera_infos(db: Session, skip: int = 0, limit: int = 10) -> Result[List[CameraInfoResponse]]:
+        """
+        获取所有摄像头信息（支持分页）
+
+        Args:
+            db: 数据库会话
+            skip: 跳过的记录数
+            limit: 限制返回的记录数
+
+        Returns:
+            Result[List[CameraInfoResponse]]: 包含摄像头信息列表的响应对象
+        """
+        camera_infos = crud_get_all_camera_infos(db, skip=skip, limit=limit)
+        return Result.SUCCESS(camera_infos)
+
+    @staticmethod
+    def create_camera_info(db: Session, camera_info: CameraInfoCreate) -> Result[CameraInfoResponse]:
+        """
+        创建新摄像头信息
+
+        Args:
+            db: 数据库会话
+            camera_info: 摄像头信息创建请求数据
+
+        Returns:
+            Result[CameraInfoResponse]: 包含创建的摄像头信息的响应对象
+        """
+        try:
+            created_camera = crud_create_camera_info(db, camera_info)
+            return Result.SUCCESS(created_camera)
+        except Exception as e:
+            return Result.ERROR(f"创建摄像头信息失败: {str(e)}")
+
+    @staticmethod
+    def update_camera_info(db: Session, camera_info_id: int, camera_info_update: CameraInfoUpdate) -> Result[
+        CameraInfoResponse]:
+        """
+        更新摄像头信息
+
+        Args:
+            db: 数据库会话
+            camera_info_id: 摄像头信息ID
+            camera_info_update: 摄像头信息更新请求数据
+
+        Returns:
+            Result[CameraInfoResponse]: 包含更新后的摄像头信息的响应对象
+        """
+        db_camera_info = crud_update_camera_info(db, camera_info_id, camera_info_update)
+        if not db_camera_info:
+            return Result.ERROR(f"Update failure: CameraInfo not found with given id={camera_info_id}")
+        return Result.SUCCESS(db_camera_info)
+
     @staticmethod
     def delete_camera_infos(db: Session, camera_info_ids_str: str) -> Result:
         """
