@@ -4,17 +4,17 @@ from typing import List
 
 # 导入依赖、CRUD 函数、模型
 from app.dependencies.db import get_db  # 获取数据库会话的依赖
-from app.crud.product import (
+from app.crud.product_crud import (
     get_product, get_all_products, create_product, update_product, delete_product
 )
-from app.JSON_schemas.product import ProductResponse, ProductCreate, ProductUpdate
+from app.JSON_schemas.product_pydantic import ProductResponse, ProductCreate, ProductUpdate
 
 # 创建路由实例（tags 用于 API 文档分类）
 # 这个 router 实例的作用是：
 # 收集接口：把当前文件中定义的所有接口（如获取商品、创建商品等）收集到一起
-# 统一管理：为这些接口添加统一的标签（"Products"），方便在 API 文档中分类显示
+# 统一管理：为这些接口添加统一的标签（tags=["Products"]），方便在 API 文档中分类显示
 # 便于注册：作为一个整体，可以被 main.py 一次性注册到主应用中
-router = APIRouter(tags=["Products"])
+router = APIRouter()
 
 # 1. GET /api/v1/products/{product_id}：获取单个商品
 @router.get("/{product_id}", response_model=ProductResponse)

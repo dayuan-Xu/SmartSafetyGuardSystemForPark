@@ -10,7 +10,7 @@ class ProductResponse(BaseModel):
 
     # 允许 Pydantic 模型从 SQLAlchemy 模型（ProductDB）实例中读取数据
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # ------------------- 请求模型（前端传数据的格式校验）-------------------
 class ProductCreate(BaseModel):

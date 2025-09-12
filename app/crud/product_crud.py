@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from app.DB_models.product import ProductDB  # 数据库模型
-from app.JSON_schemas.product import ProductCreate, ProductUpdate  # 请求模型
+from app.DB_models.product_db import ProductDB  # 数据库模型
+from app.JSON_schemas.product_pydantic import ProductCreate, ProductUpdate  # 请求模型
 from typing import Optional, List
 
 # 1. 查：根据 ID 获取单个商品
@@ -36,7 +36,7 @@ def update_product(
     if not db_product:
         return None  # 商品不存在，返回 None
     # 将更新的字段赋值给数据库实例（只更新非 None 的字段）
-    update_data = product_update.dict(exclude_unset=True)  # 排除未传的字段
+    update_data = product_update.model_dump(exclude_unset=True)  # 排除未传的字段
     for key, value in update_data.items():
         setattr(db_product, key, value)
     # 提交修改

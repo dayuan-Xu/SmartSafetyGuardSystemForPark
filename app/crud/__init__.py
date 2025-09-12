@@ -5,4 +5,4 @@
 # 接收数据库会话（db）和业务参数（如商品信息），返回操作结果；
 # 隔离数据层和接口层（接口只调用 CRUD 函数，不直接写 db.add() 等逻辑）。
 #
-# 关键文件：crud/product.py（商品的 CRUD 函数）：
+# 关键文件：crud/product_crud.py（商品的 CRUD 函数）：
