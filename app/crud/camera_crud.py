@@ -50,11 +50,31 @@ def update_camera_info(
     db.refresh(db_camera_info)
     return db_camera_info
 
-# 5. 删：根据 ID 删除摄像头信息
-def delete_camera_info(db: Session, camera_info_id: int) -> bool:
-    db_camera_info = get_camera_info(db, camera_info_id)
-    if not db_camera_info:
-        return False  # 摄像头信息不存在，删除失败
-    db.delete(db_camera_info)
+# 5. 批量删：根据 ID 列表批量删除摄像头信息
+def delete_camera_infos(db: Session, camera_info_ids: List[int]) -> int:
+    """
+    批量删除摄像头信息
+
+    Args:
+        db: 数据库会话
+        camera_info_ids: 摄像头信息ID列表
+
+    Returns:
+        int: 成功删除的记录数
+    """
+    # 查询存在的摄像头信息
+    db_camera_infos = db.query(CameraInfoDB).filter(
+        CameraInfoDB.camera_id.in_(camera_info_ids)
+    ).all()
+
+    # 获取实际存在的记录数量
+    deleted_count = len(db_camera_infos)
+
+    # 批量删除
+    for db_camera_info in db_camera_infos:
+        db.delete(db_camera_info)
+
+    # 提交事务
     db.commit()
-    return True  # 删除成功
+
+    return deleted_count

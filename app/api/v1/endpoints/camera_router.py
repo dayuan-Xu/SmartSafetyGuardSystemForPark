@@ -5,11 +5,12 @@ from sqlalchemy.orm import Session
 
 from app.JSON_schemas.Result_pydantic import Result
 from app.JSON_schemas.camera_info_pydantic import CameraInfoResponse, CameraInfoCreate, CameraInfoUpdate
-from app.crud.camera_crud import (
-    get_camera_info, get_all_camera_infos, create_camera_info, update_camera_info, delete_camera_info
-)
-# 导入依赖、CRUD 函数、模型
 from app.dependencies.db import get_db  # 获取数据库会话的依赖
+from app.services.camera_info_service import CameraInfoService # 导入service层代码负责业务逻辑
+from app.crud.camera_crud import (
+    get_camera_info, get_all_camera_infos, create_camera_info, update_camera_info
+)
+
 
 # 创建路由实例（tags 用于 API 文档分类）
 # 这个 router 实例的作用是：
@@ -64,13 +65,10 @@ def update_existing_camera_info(
     return Result.SUCCESS(db_camera_info)  # 封装为 Result 格式
 
 
-# 5. DELETE /api/v1/camera_infos/{camera_info_id}：删除摄像头信息
-@router.delete("/{camera_info_id}", response_model=Result, status_code=status.HTTP_200_OK,summary="删除摄像头信息")
+# 5. DELETE /api/v1/camera_infos/{camera_info_ids}：删除摄像头信息（支持单个或批量删除）
+@router.delete("/{camera_info_ids}", response_model=Result, status_code=status.HTTP_200_OK, summary="删除摄像头信息（支持单个或批量删除）")
 def remove_camera_info(
-    camera_info_id: int,
+    camera_info_ids: str,
     db: Session = Depends(get_db)
 ):
-    success = delete_camera_info(db, camera_info_id)
-    if not success:
-        return Result.ERROR(f"Delete failure: CameraInfo with id {camera_info_id} not found")
-    return Result.SUCCESS(None,"删除成功")  # 返回空数据的 Result 表示删除成功
+    return CameraInfoService.delete_camera_infos(db, camera_info_ids)
