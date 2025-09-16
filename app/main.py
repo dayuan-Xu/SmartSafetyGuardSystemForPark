@@ -7,6 +7,7 @@
 from fastapi import FastAPI
 from app.api.v1.endpoints import product  # 导入商品接口路由
 from app.api.v1.endpoints import camera_router  # 导入商品接口路由
+from app.api.v1.endpoints import user_router  # 添加这行导入语句
 
 # 创建 FastAPI 实例
 app = FastAPI(
@@ -22,6 +23,7 @@ app = FastAPI(
 # 版本管理：通过 v1 这样的版本号，方便后续升级 API 版本
 app.include_router(camera_router.router, prefix="/api/v1/cameraInfos", tags=["摄像头信息"])
 app.include_router(product.router, prefix="/api/v1/products", tags=["产品信息"])
+app.include_router(user_router.router, prefix="/api/v1/users", tags=["用户信息"])
 
 
 
