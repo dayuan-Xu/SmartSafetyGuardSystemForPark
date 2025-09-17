@@ -3,11 +3,8 @@ import os
 import threading
 import time
 from typing import Literal, Dict, List
-
-import cv2
 from fastapi import WebSocket
 from sqlalchemy.orm import Session
-
 from app.JSON_schemas.Result_pydantic import Result
 from app.crud.alarm_crud import update_alarm_end_time, create_alarm
 from app.crud.camera_crud import get_camera_info
@@ -68,7 +65,6 @@ async def _async_broadcast_alarm(alarm):
         "alarm_status": alarm.alarm_status,
         "alarm_time": alarm.alarm_time.isoformat() if alarm.alarm_time else None,
         "snapshot_url": alarm.snapshot_url,
-        "video_clip_url": alarm.video_clip_url
     }
     await manager.broadcast(alarm_dict)
 
@@ -90,17 +86,18 @@ class SafetyMonitorService:
 
        # -------------------------- RTSP视频流安防检测 --------------------------
     @classmethod
-    def _safety_monitor_loop(cls, camera_id: int, rtsp_url: str|int, analysis_mode: Literal[1, 2, 3, 4], db: Session):
-        print(f"开始监控摄像头 {camera_id}（线程：{threading.current_thread().name}）")
-        thread_id = f"{camera_id}_{analysis_mode}"
+    def _safety_analysis_loop(cls, camera_id: int, rtsp_url: str | int, analysis_mode: Literal[1, 2, 3, 4], db: Session):
+        print(f"开始对监控摄像头进行安防检测 {camera_id}（线程：{threading.current_thread().name}）")
+        thread_name = f"安防检测- 摄像头ID: {camera_id}, 分析模式: {AlarmCase.descs[analysis_mode-2]}"
         frame_count = 0
 
         try:
             model=DetectionService.model
-            results=model(rtsp_url, imgsz=640, stream= True, vid_stride=3, save=True, project="detection_results", name=f"摄像头{camera_id} 分析模式{analysis_mode}")
+            results=model(rtsp_url, imgsz=640, stream= True, vid_stride=3, save=True, project="detection_results", name=f"摄像头{camera_id} 分析模式{analysis_mode}", verbose=False)
             for r in results:
+                frame_count += 1
                 # 检查停止信号（优先判断，确保及时退出）
-                if cls.thread_stop_flags.get(thread_id, True):
+                if cls.thread_stop_flags.get(thread_name, True):
                     print(f"收到停止信号，停止摄像头 {camera_id}的安防分析")
                     break
 
@@ -176,31 +173,31 @@ class SafetyMonitorService:
             print(f"摄像头 {camera_id} 监控异常：{str(e)}")
         finally:
             # 从线程管理中移除
-            if thread_id in cls.active_threads:
-                del cls.active_threads[thread_id]
-            if thread_id in cls.thread_stop_flags:
-                del cls.thread_stop_flags[thread_id]
-            print(f"摄像头 {camera_id} 停止监控：处理帧 {frame_count} 帧")
+            if thread_name in cls.active_threads:
+                del cls.active_threads[thread_name]
+            if thread_name in cls.thread_stop_flags:
+                del cls.thread_stop_flags[thread_name]
+            print(f"摄像头 {camera_id} 安防分析已停止：处理帧 {frame_count} 帧")
 
     # -------------------------- 安防检测循环启停方法 --------------------------
     @classmethod
     def start_thread(cls, camera_id, rtsp_url, t_mode, db):
-        t_id = f"{camera_id}_{t_mode}"
-        cls.thread_stop_flags[t_id] = False
+        t_name = f"安防检测- 摄像头ID: {camera_id}, 分析模式: {AlarmCase.descs[t_mode-2]}"
+        cls.thread_stop_flags[t_name] = False
 
         thread = threading.Thread(
-            target=cls._safety_monitor_loop,
+            target=cls._safety_analysis_loop,
             args=(camera_id, rtsp_url, t_mode, db),
             daemon=True,
-            name=t_id
+            name=t_name
         )
 
-        cls.active_threads[t_id] = thread
+        cls.active_threads[t_name] = thread
         thread.start()
-        return t_id
+        return t_name
 
     @classmethod
-    def start_safety_monitor(cls, camera_id: str, db: Session) -> Result:
+    def start_safety_analysis(cls, camera_id: str, db: Session) -> Result:
         try:
             camera_id = int(camera_id)
             current_script_parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -208,20 +205,13 @@ class SafetyMonitorService:
             print("开启监控视频流：", rtsp_url)
             analysis_mode = 3
 
-            started_threads = []
-            if analysis_mode >= 2:
-                thread_id = cls.start_thread(camera_id, rtsp_url, analysis_mode, db)
-                started_threads.append(thread_id)
-            elif analysis_mode == 1:
-                for mode in [2, 3, 4]:
-                    thread_id = cls.start_thread(camera_id, rtsp_url, mode, db)
-                    started_threads.append(thread_id)
+            thread_name = cls.start_thread(camera_id, rtsp_url, analysis_mode, db)
 
             result_data = {
                 "camera_id": camera_id,
                 "rtsp_url": rtsp_url,
                 "analysis_mode": analysis_mode,
-                "started_threads": started_threads
+                "started_thread": thread_name
             }
             return Result.SUCCESS(result_data, f"已成功启动摄像头 {camera_id} 的监控服务")
 
@@ -230,14 +220,14 @@ class SafetyMonitorService:
 
     @classmethod
     def stop_thread(cls, camera_id, t_mode):
-        t_id = f"{camera_id}_{t_mode}"
-        cls.thread_stop_flags[t_id] = True
-        if t_id in cls.active_threads:
-            del cls.active_threads[t_id]
-        return t_id
+        t_name = f"安防检测- 摄像头ID: {camera_id}, 分析模式: {AlarmCase.descs[t_mode-2]}"
+        cls.thread_stop_flags[t_name] = True
+        if t_name in cls.active_threads:
+            del cls.active_threads[t_name]
+        return t_name
 
     @classmethod
-    def stop_safety_monitor(cls, camera_id: str, db: Session) -> Result:
+    def stop_safety_analysis(cls, camera_id: str, db: Session) -> Result:
         try:
             camera_id = int(camera_id)
             camera_info = get_camera_info(db, camera_id)
@@ -245,43 +235,18 @@ class SafetyMonitorService:
                 return Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
 
             analysis_mode = camera_info.analysis_mode or 2
-            stopped_threads = []
-            if analysis_mode >= 2:
-                thread_id = cls.stop_thread(camera_id, analysis_mode)
-                stopped_threads.append(thread_id)
-            elif analysis_mode == 1:
-                for mode in [2, 3, 4]:
-                    thread_id = cls.stop_thread(camera_id, mode)
-                    stopped_threads.append(thread_id)
+
+            thread_name = cls.stop_thread(camera_id, analysis_mode)
 
             result_data = {
                 "camera_id": camera_id,
                 "analysis_mode": analysis_mode,
-                "stopped_threads": stopped_threads
+                "stopped_thread": thread_name
             }
             return Result.SUCCESS(result_data, f"已发送停止监控信号: 摄像头 {camera_id}")
 
         except Exception as e:
             return Result.ERROR(f"停止监控失败: {str(e)}")
-
-    # rtsp流连通性检测方法
-    @classmethod
-    def test_camera_connection(cls, camera_id, db):
-        try:
-            camera_info = get_camera_info(db, camera_id)
-            if not camera_info:
-                return Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
-
-            cap = cv2.VideoCapture(camera_info.rtsp_url)
-            cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000)
-            if cap.isOpened():
-                cap.release()
-                return Result.SUCCESS(True, "RTSP流连接成功")
-            else:
-                return Result.ERROR("RTSP流连接失败")
-
-        except Exception as e:
-            return Result.ERROR(f"测试连接时发生错误: {str(e)}")
 
     @classmethod
     def handle_state_result(cls, state_result, camera_id, alarm_type, alarm_case_source, r, db):
@@ -292,15 +257,7 @@ class SafetyMonitorService:
                 # 保存截图（轻量级I/O，可根据需求提交到线程池）
                 snapshot_path = StorageService.save_snapshot(r.plot(), camera_id)
                 # 创建告警（数据库操作，若耗时可加线程池）
-                alarm = create_alarm(
-                    db=db,
-                    camera_id=camera_id,
-                    alarm_type=alarm_type,
-                    alarm_status=0,
-                    alarm_time=get_now(),
-                    snapshot_url=snapshot_path,
-                    video_clip_url="test"
-                )
+                alarm=create_alarm(db,camera_id, alarm_type, 0, get_now(), snapshot_path)
                 print(f"[{time.ctime()}] 已经为摄像头（ID： {camera_id}）创建告警（Alarm ID：{alarm.alarm_id}）")
                 cls.alarm_tracker.bind_alarm_id(alarm_case_source, alarm.alarm_id)
                 # 广播告警（非阻塞）

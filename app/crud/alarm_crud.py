@@ -9,7 +9,6 @@ def create_alarm(
     alarm_status: int,
     alarm_time: datetime,
     snapshot_url: str,
-    video_clip_url: str
 ):
     """
     创建一个新的报警记录
@@ -21,7 +20,6 @@ def create_alarm(
         alarm_status=alarm_status,
         alarm_time=alarm_time,
         snapshot_url=snapshot_url,
-        video_clip_url=video_clip_url
     )
     db.add(new_alarm)
     db.commit()

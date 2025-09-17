@@ -94,4 +94,3 @@ class DebouncedAlarmCaseTracker:
     def bind_alarm_id(self, alarm_case_source, alarm_id):
         """将告警ID与当前告警状态绑定（用于后续更新告警记录）"""
         self.alarm_case_states[alarm_case_source]["alarm_id"] = alarm_id
-        print(f"[{time.ctime()}] 已经绑定告警(Alarm ID:{alarm_id}) 到告警场景状态:{self.alarm_case_states[alarm_case_source]}")
