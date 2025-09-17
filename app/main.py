@@ -25,8 +25,7 @@ app = FastAPI(
 app.include_router(camera_router.router, prefix="/api/v1/cameraInfos", tags=["摄像头信息"])
 app.include_router(product.router, prefix="/api/v1/products", tags=["产品信息"])
 app.include_router(user_router.router, prefix="/api/v1/users", tags=["用户信息"])
-app.include_router(alarm_handle_record_router.router,prefix="/api/v1/alarm_handle_records",tags=["告警处理记录"]
-                   )
+app.include_router(alarm_handle_record_router.router,prefix="/api/v1/alarm_handle_records",tags=["告警处理记录"])
 
 
 
