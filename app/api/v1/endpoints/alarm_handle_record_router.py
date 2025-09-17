@@ -10,20 +10,14 @@ from app.services.alarm_handle_record_service import AlarmHandleRecordService
 router = APIRouter()
 
 # 1. GET /api/v1/alarm_handle_records/{handle_id}：获取单个告警处理记录
-@router.get("/{handle_id}", response_model=Result[AlarmHandleRecordResponse], summary="获取单个告警处理记录")
+@router.get("/{alarm_id}", response_model=Result[List[AlarmHandleRecordResponse]], summary="获取告警处理记录列表")
 def read_alarm_handle_record(
-    handle_id: int = Path(..., title="处理记录ID", description="处理记录唯一标识"),
+    alarm_id: int = Path(..., title="告警ID", description="告警记录唯一标识"),
     db: Session = Depends(get_db)
 ):
     """
-    根据处理记录ID获取单个告警处理记录
-
-    Args:
-        handle_id: 处理记录唯一标识
-        db: 数据库会话对象
-
-    Returns:
-        Result[AlarmHandleRecordResponse]: 包含告警处理记录信息的结果对象
+    根据告警ID获取相关处理记录列表
     """
-    return AlarmHandleRecordService.get_handle_record_by_id(db, handle_id)
+    return AlarmHandleRecordService.get_handle_records_by_alarm_id(db, alarm_id)
+
 

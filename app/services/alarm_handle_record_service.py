@@ -9,19 +9,19 @@ from app.crud.alarm_handle_record_crud import (
 
 class AlarmHandleRecordService:
     @staticmethod
-    def get_handle_record_by_id(db: Session, handle_id: int) -> Result[AlarmHandleRecordResponse]:
+    def get_handle_records_by_alarm_id(db: Session, alarm_id: int) -> Result[AlarmHandleRecordResponse]:
         """
-        根据处理记录ID获取单个告警处理记录
+        根据告警ID获取单个对应所有告警处理记录
 
         Args:
             db: 数据库会话
-            handle_id: 处理记录ID
+            alarm_id: 处理记录ID
 
         Returns:
             Result[AlarmHandleRecordResponse]: 包含告警处理记录信息的响应对象
         """
-        db_handle_record = crud_get_alarm_handle_record(db, handle_id)
+        db_handle_record = crud_get_alarm_handle_record(db, alarm_id)
         if not db_handle_record:
-            return Result.ERROR(f"AlarmHandleRecord not found with given id={handle_id}")
+            return Result.ERROR(f"AlarmHandleRecord not found with given alarm id={alarm_id}")
         return Result.SUCCESS(db_handle_record)
 
