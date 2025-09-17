@@ -7,6 +7,8 @@
 from fastapi import FastAPI
 from app.api.v1.endpoints import product  # 导入商品接口路由
 from app.api.v1.endpoints import camera_router  # 导入商品接口路由
+from app.api.v1.endpoints import user_router  # 导入用户接口路由
+from app.api.v1.endpoints import alarm_handle_record_router #导入报警记录接口路由
 
 # 创建 FastAPI 实例
 app = FastAPI(
@@ -22,6 +24,9 @@ app = FastAPI(
 # 版本管理：通过 v1 这样的版本号，方便后续升级 API 版本
 app.include_router(camera_router.router, prefix="/api/v1/cameraInfos", tags=["摄像头信息"])
 app.include_router(product.router, prefix="/api/v1/products", tags=["产品信息"])
+app.include_router(user_router.router, prefix="/api/v1/users", tags=["用户信息"])
+app.include_router(alarm_handle_record_router.router,prefix="/api/v1/alarm_handle_records",tags=["告警处理记录"]
+                   )
 
 
 
@@ -34,3 +39,4 @@ def read_root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="localhost", port=8089, reload=True)
+
