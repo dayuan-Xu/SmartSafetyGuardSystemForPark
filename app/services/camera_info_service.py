@@ -1,4 +1,6 @@
 from typing import List
+
+import cv2
 from sqlalchemy.orm import Session
 from app.JSON_schemas.Result_pydantic import Result
 from app.JSON_schemas.camera_info_pydantic import CameraInfoResponse, CameraInfoCreate, CameraInfoUpdate
@@ -7,7 +9,7 @@ from app.crud.camera_crud import (
     get_all_camera_infos as crud_get_all_camera_infos,
     create_camera_info as crud_create_camera_info,
     update_camera_info as crud_update_camera_info,
-    delete_camera_infos as crud_delete_camera_infos
+    delete_camera_infos as crud_delete_camera_infos, get_camera_info
 )
 class CameraInfoService:
     @staticmethod
@@ -116,3 +118,22 @@ class CameraInfoService:
                 {"deleted_count": deleted_count},
                 f"批量删除成功: 共删除{deleted_count}条记录"
             )
+
+        # rtsp流连通性检测方法
+    @classmethod
+    def test_camera_connection(cls, camera_id, db):
+        try:
+            camera_info = get_camera_info(db, camera_id)
+            if not camera_info:
+                return Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
+
+            cap = cv2.VideoCapture(camera_info.rtsp_url)
+            cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 3000)
+            if cap.isOpened():
+                cap.release()
+                return Result.SUCCESS(True, "RTSP流连接成功")
+            else:
+                return Result.ERROR("RTSP流连接失败")
+
+        except Exception as e:
+            return Result.ERROR(f"测试连接时发生错误: {str(e)}")

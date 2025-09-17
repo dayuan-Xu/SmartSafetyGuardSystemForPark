@@ -50,3 +50,8 @@ def remove_camera_info(
     db: Session = Depends(get_db)
 ):
     return CameraInfoService.delete_camera_infos(db, camera_info_ids)
+
+# 6.GET /api/v1/camera_infos/test/{camera_id} :测试摄像头能否连接
+@router.get("/camera_infos/test/{camera_id}", response_model=Result, summary="测试摄像头能否连接")
+def test_camera_connection(camera_id: str = "6", db: Session = Depends(get_db)):
+    return CameraInfoService.test_camera_connection(camera_id, db)

@@ -5,11 +5,17 @@ __pycache__/
 .venv/
 datasets/
 runs/
+app/detection_results/
+app/log
 
 # 忽略特定文件
 *.log
 .env
 yolo11n.pt
 yolov8m.pt
+nano_best.pt
+medium_best.pt
 merge_datasets.py
 my_models.py
+app/yolo11n.pt
+app/test_videos
