@@ -1,6 +1,5 @@
 # 忽略特定文件夹
 __pycache__/
-*.pyc
 .idea/
 .venv/
 datasets/
@@ -9,6 +8,7 @@ app/detection_results/
 app/log
 
 # 忽略特定文件
+*.pyc
 *.log
 .env
 yolo11n.pt
