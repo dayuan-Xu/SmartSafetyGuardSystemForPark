@@ -1,4 +1,6 @@
 # 忽略特定文件夹
+__pycache__/
+*.pyc
 .idea/
 .venv/
 datasets/
@@ -9,5 +11,9 @@ runs/
 .env
 yolo11n.pt
 yolov8m.pt
+nano_best.pt
+medium_best.pt
 merge_datasets.py
 my_models.py
+app/yolo11n.pt
+app/test_videos
