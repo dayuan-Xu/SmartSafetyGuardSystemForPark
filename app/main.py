@@ -37,5 +37,5 @@ def read_root():
 # 启动服务（开发环境用，生产环境用 uvicorn 命令启动）
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="localhost", port=8089, reload=True)
+    uvicorn.run("app.main:app", host="localhost", port=8089)
 
