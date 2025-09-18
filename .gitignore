@@ -13,7 +13,7 @@ app/log
 .env
 yolo11n.pt
 yolov8m.pt
-nano_best.pt
+small_best.pt
 medium_best.pt
 merge_datasets.py
 my_models.py

@@ -10,7 +10,7 @@ class DetectionService:
     # 使用Path获取项目根目录
     project_root = Path(__file__).parent.parent.parent
     # 构建模型文件路径
-    model_path = project_root / 'nano_best.pt'
+    model_path = project_root / 'small_best.pt'
     model = YOLO(model_path)  # 加载本地模型
 
     # 人在自定义数据集中的的类别ID是0
