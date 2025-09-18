@@ -225,7 +225,7 @@ class SafetyAnalysisService:
                 def process_alarm_async():
                     try:
                         # 保存截图到云OSS并获取URL
-                        snapshot_url = StorageService.save_snapshot(r.plot(), camera_id)
+                        snapshot_url = StorageService.upload_alarm_snapshot(r.plot(), camera_id)
 
                         # 创建告警记录
                         alarm = create_alarm(db, camera_id, alarm_type, 0, get_now(), snapshot_url)

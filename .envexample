@@ -4,3 +4,23 @@ MYSQL_PORT=3306
 MYSQL_USER=root
 MYSQL_PASSWORD=your_password
 MYSQL_DATABASE=your_db_name
+
+# Redis配置
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
+
+# 应用配置
+SNAPSHOT_PATH=./snapshots/  # 告警截图存储路径
+
+# 防抖时间配置（单位：秒）
+# 正常→违规的防抖窗口：确保是真实违规（如模型N秒内连续地检测到未戴安全帽）
+DEBOUNCE_NORMAL_TO_VIOLATION = 1
+# 违规→正常的防抖窗口：确保是真实恢复（如模型N秒内连续地检测到已戴安全帽）
+DEBOUNCE_VIOLATION_TO_NORMAL = 2
+
+# 阿里云OSS配置
+OSS_ACCESS_KEY_ID=your_access_key_id
+OSS_ACCESS_KEY_SECRET=your_access_key_secret
+OSS_BUCKET_NAME=your_bucket_name
+OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
