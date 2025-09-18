@@ -3,7 +3,7 @@ from datetime import datetime
 import cv2
 from dotenv import load_dotenv
 
-from app.utils.my_utils import upload_img_to_OSS, get_now_str
+from app.utils.my_utils import upload_img_to_OSS, get_now_str, generate_unique_object_name
 
 load_dotenv()
 SNAPSHOT_PATH = os.getenv('SNAPSHOT_PATH')
@@ -31,5 +31,6 @@ class StorageService:
         _, buffer = cv2.imencode('.jpg', frame)
         frame_bytes = buffer.tobytes()
         img_name = f"{camera_id}_{get_now_str()}.jpg"
-        file_url = upload_img_to_OSS(frame_bytes, img_name)
+        object_key= generate_unique_object_name(img_name)
+        file_url = upload_img_to_OSS(frame_bytes, object_key)
         return file_url

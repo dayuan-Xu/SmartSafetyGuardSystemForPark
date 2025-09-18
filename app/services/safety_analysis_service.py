@@ -35,7 +35,7 @@ class SafetyAnalysisService:
     # -------------------------- RTSP视频流安防检测 --------------------------
     @classmethod
     def _safety_analysis_loop(cls, camera_id: int, rtsp_url: str | int, analysis_mode: Literal[1, 2, 3, 4], db: Session):
-        logger.info(f"开始对监控摄像头进行安防检测 {camera_id}（线程：{threading.current_thread().name}）")
+        logger.info(f"安防分析线程已启动，开始检测监控摄像头（id={camera_id}），线程名：{threading.current_thread().name}）")
         thread_name = f"安防检测- 摄像头ID: {camera_id}, 分析模式: {AlarmCase.descs[analysis_mode-2]}"
         frame_count = 0
 
@@ -149,7 +149,6 @@ class SafetyAnalysisService:
 
         cls.active_threads[t_name] = thread
         thread.start()
-        logger.info(f"启动安防检测线程: {t_name}")
         return t_name
 
     @classmethod
@@ -164,8 +163,9 @@ class SafetyAnalysisService:
             rtsp_url= camera_info.rtsp_url
             analysis_mode = camera_info.analysis_mode
             """
-            current_script_parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            rtsp_url = os.path.join(current_script_parent_dir, "test_videos", "all_helmet_but_none_vest.mp4")
+            # current_script_parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # rtsp_url = os.path.join(current_script_parent_dir, "test_videos", "all_helmet_but_none_vest.mp4")
+            rtsp_url = r"D:\D盘桌面\模型测试\all_helmet_but_none_vest.mp4"
             analysis_mode = 2
             logger.info(f"开启安防分析，视频流：{rtsp_url}, 分析模式：{AlarmCase.descs[analysis_mode-2]}")
 
@@ -226,10 +226,11 @@ class SafetyAnalysisService:
                     try:
                         # 保存截图到云OSS并获取URL
                         snapshot_url = StorageService.upload_alarm_snapshot(r.plot(), camera_id)
+                        logger.info(f"已经保存告警截图到云OSS，访问URL: {snapshot_url}")
 
                         # 创建告警记录
                         alarm = create_alarm(db, camera_id, alarm_type, 0, get_now(), snapshot_url)
-                        logger.info(f"已经为摄像头（ID： {camera_id}）创建告警（Alarm ID：{alarm.alarm_id}）")
+                        logger.info(f"已经为摄像头（ID： {camera_id}）创建告警（Alarm ID：{alarm.alarm_id}，告警类型：{AlarmCase.descs[alarm_type]}）")
 
                         # 绑定告警ID到跟踪器
                         cls.alarm_tracker.bind_alarm_id(alarm_case_source, alarm.alarm_id)
