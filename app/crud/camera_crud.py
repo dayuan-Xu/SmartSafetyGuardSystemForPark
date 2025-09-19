@@ -17,10 +17,35 @@ CameraInfoDB 模型的含义:
 def get_camera_info(db: Session, camera_id: int) -> Optional[CameraInfoDB]:
     return db.query(CameraInfoDB).filter(CameraInfoDB.camera_id == camera_id).first()
 
-# 2. 查：获取所有摄像头信息（支持分页，默认取 10 条）
+# 2.1. 查：获取所有摄像头信息（支持分页，默认取 10 条）
 def get_all_camera_infos(db: Session, skip: int = 0, limit: int = 10) -> List[CameraInfoDB]:
     return db.query(CameraInfoDB).offset(skip).limit(limit).all()
 
+
+# 2.2. 查：根据条件获取摄像头信息（支持分页）
+def get_camera_infos_with_condition(
+        db: Session,
+        park_area: Optional[str] = None,
+        analysis_mode: Optional[int] = None,
+        camera_status: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 10
+) -> List[CameraInfoDB]:
+    query = db.query(CameraInfoDB)
+
+    # 添加园区位置条件
+    if park_area:
+        query = query.filter(CameraInfoDB.park_area == park_area)
+
+    # 添加分析模式条件
+    if analysis_mode is not None:
+        query = query.filter(CameraInfoDB.analysis_mode == analysis_mode)
+
+    # 添加摄像头状态条件
+    if camera_status is not None:
+        query = query.filter(CameraInfoDB.camera_status == camera_status)
+
+    return query.offset(skip).limit(limit).all()
 # 3. 增：创建新摄像头信息
 def create_camera_info(db: Session, camera_info: CameraInfoCreate) -> CameraInfoDB:
     # 1. 将 Pydantic 模型（CameraInfoCreate）转成 SQLAlchemy 模型（CameraInfoDB）
@@ -78,3 +103,5 @@ def delete_camera_infos(db: Session, camera_info_ids: List[int]) -> int:
     db.commit()
 
     return deleted_count
+
+

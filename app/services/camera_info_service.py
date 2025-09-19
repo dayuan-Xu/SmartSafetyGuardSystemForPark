@@ -1,11 +1,13 @@
-from typing import List
+from typing import List, Optional
 
 import cv2
 from sqlalchemy.orm import Session
 from app.JSON_schemas.Result_pydantic import Result
-from app.JSON_schemas.camera_info_pydantic import CameraInfoResponse, CameraInfoCreate, CameraInfoUpdate
+from app.JSON_schemas.camera_info_pydantic import CameraInfoResponse, CameraInfoCreate, CameraInfoUpdate, \
+    CameraInfoPageResponse
 from app.crud.camera_crud import (
     get_camera_info as crud_get_camera_info,
+    get_camera_infos_with_condition as crud_get_camera_infos_with_condition,
     get_all_camera_infos as crud_get_all_camera_infos,
     create_camera_info as crud_create_camera_info,
     update_camera_info as crud_update_camera_info,
@@ -28,6 +30,39 @@ class CameraInfoService:
         if not db_camera_info:
             return Result.ERROR(f"CameraInfo not found with given id={camera_info_id}")
         return Result.SUCCESS(db_camera_info)
+
+    @staticmethod
+    def get_camera_infos_with_condition(
+            db: Session,
+            park_area: Optional[str] = None,
+            analysis_mode: Optional[int] = None,
+            camera_status: Optional[int] = None,
+            skip: int = 0,
+            limit: int = 10
+    ) -> Result[dict]:
+        """
+        根据条件获取摄像头信息（支持分页）
+
+        Args:
+            db: 数据库会话
+            park_area: 园区位置
+            analysis_mode: 分析模式
+            camera_status: 摄像头状态
+            skip: 跳过的记录数
+            limit: 限制返回的记录数
+
+        Returns:
+            Result[dict]: 包含摄像头信息列表和分页信息的响应对象
+        """
+        try:
+            camera_infos = crud_get_camera_infos_with_condition(
+                db, park_area, analysis_mode, camera_status, skip, limit
+            )
+            total = len(camera_infos)
+
+            return Result.SUCCESS(CameraInfoPageResponse(total, camera_infos))
+        except Exception as e:
+            return Result.ERROR(f"查询摄像头信息失败: {str(e)}")
 
     @staticmethod
     def get_all_camera_infos(db: Session, skip: int = 0, limit: int = 10) -> Result[List[CameraInfoResponse]]:

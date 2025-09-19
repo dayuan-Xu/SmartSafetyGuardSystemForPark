@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 # ------------------- 响应模型（给前端返回数据的格式）-------------------
@@ -17,6 +17,10 @@ class CameraInfoResponse(BaseModel):
     # 允许 Pydantic 模型从 SQLAlchemy 模型（CameraInfoDB）实例中读取数据
     class Config:
         from_attributes = True
+
+class CameraInfoPageResponse(BaseModel):
+    total: int
+    cameras: List[CameraInfoResponse]
 
 # ------------------- 请求模型（前端传数据的格式校验）-------------------
 class CameraInfoCreate(BaseModel):

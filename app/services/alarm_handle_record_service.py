@@ -1,10 +1,15 @@
-#file:app\services\alarm_handle_record_service.py
 from sqlalchemy.orm import Session
 from app.JSON_schemas.Result_pydantic import Result
-from app.JSON_schemas.alarm_handle_record_pydantic import AlarmHandleRecordResponse
+from app.JSON_schemas.alarm_handle_record_pydantic import (
+    AlarmHandleRecordResponse,
+    AlarmHandleRecordCreate
+)
 from app.crud.alarm_handle_record_crud import (
     get_alarm_handle_record as crud_get_alarm_handle_record,
+    create_alarm_handle_record as crud_create_alarm_handle_record
 )
+from app.crud.alarm_crud import update_alarm_status
+from app.services.storage_service import StorageService
 
 
 class AlarmHandleRecordService:
@@ -25,3 +30,53 @@ class AlarmHandleRecordService:
             return Result.ERROR(f"AlarmHandleRecord not found with given alarm id={alarm_id}")
         return Result.SUCCESS(db_handle_record)
 
+    @classmethod
+    def create_handle_record(cls, db: Session, record_create: AlarmHandleRecordCreate) -> Result[AlarmHandleRecordResponse]:
+        """
+        创建告警处理记录
+
+        Args:
+            db: 数据库会话
+            record_create: 告警处理记录创建数据
+
+        Returns:
+            Result[AlarmHandleRecordResponse]: 包含创建的告警处理记录的响应对象
+        """
+        try:
+            # 创建告警处理记录
+            created_record = crud_create_alarm_handle_record(db, record_create)
+
+            # 根据处理动作类型更新对应告警记录的状态
+            if record_create.handle_action == 1:  # 派单处理
+                update_alarm_status(db, record_create.alarm_id, 2)  # 告警状态为2表示"处理中（已派单）"
+            elif record_create.handle_action == 2:  # 标记已解决
+                update_alarm_status(db, record_create.alarm_id, 3)  # 告警状态为3表示"处理完成"
+            elif record_create.handle_action == 0:  # 标记误报
+                update_alarm_status(db, record_create.alarm_id, 1)  # 告警状态为1表示"确认误报"
+
+
+            return Result.SUCCESS(created_record, "处理记录创建成功")
+        except Exception as e:
+            return Result.ERROR(f"处理记录创建失败: {str(e)}")
+
+    @classmethod
+    def upload_attachment(cls, db: Session, attachment_data) -> Result[str]:
+        """
+        上传告警处理附件并返回URL
+
+        Args:
+            db: 数据库会话
+            attachment_data: 附件数据（包含Base64编码的内容和文件扩展名）
+
+        Returns:
+            Result[str]: 包含文件URL的响应对象
+        """
+        try:
+            # 上传附件到OSS并获取URL
+            file_url = StorageService.upload_alarm_attachment(
+                attachment_data.file_content,
+                attachment_data.file_extension
+            )
+            return Result.SUCCESS(file_url, "附件上传成功")
+        except Exception as e:
+            return Result.ERROR(f"附件上传失败: {str(e)}")

@@ -56,7 +56,7 @@ def generate_unique_object_name(original_path):
 
     return unique_object_name
 
-def upload_img_to_OSS(content, object_key):
+def upload_file_on_OSS(content, object_key):
     """
     上传图片到阿里云OSS
 

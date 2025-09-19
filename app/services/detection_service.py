@@ -11,7 +11,7 @@ class DetectionService:
     project_root = Path(__file__).parent.parent.parent
     # 构建模型文件路径
     model_path = project_root / 'small_best.pt'
-    model = YOLO(model_path)  # 加载本地模型
+    model = YOLO(model_path)  # 加载本地模型, 假设该模型能够一次性完成物种类别对象的检测人物。
 
     # 人在自定义数据集中的的类别ID是0
     person_class_id = 0

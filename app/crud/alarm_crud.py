@@ -1,6 +1,10 @@
 from datetime import datetime
+from typing import Optional, List
+
 from sqlalchemy.orm import Session
 from app.DB_models.alarm_db import AlarmDB
+from app.DB_models.alarm_handle_record_db import AlarmHandleRecordDB
+
 
 def create_alarm(
     db: Session,
@@ -41,6 +45,39 @@ def get_alarms_by_camera_id(db: Session, camera_id: int, skip: int = 0, limit: i
     return db.query(AlarmDB).filter(AlarmDB.camera_id == camera_id).offset(skip).limit(limit).all()
 
 
+def get_alarms_with_condition(
+        db: Session,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        alarm_type: Optional[int] = None,
+        alarm_status: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 10
+):
+    """
+    根据条件获取报警记录列表（支持分页）
+    """
+    query = db.query(AlarmDB)
+
+    # 添加时间范围条件
+    if start_time and end_time:
+        query = query.filter(AlarmDB.alarm_time.between(start_time, end_time))
+    elif start_time:
+        query = query.filter(AlarmDB.alarm_time >= start_time)
+    elif end_time:
+        query = query.filter(AlarmDB.alarm_time <= end_time)
+
+    # 添加告警类型条件
+    if alarm_type is not None:
+        query = query.filter(AlarmDB.alarm_type == alarm_type)
+
+    # 添加告警状态条件
+    if alarm_status is not None:
+        query = query.filter(AlarmDB.alarm_status == alarm_status)
+
+    return query.offset(skip).limit(limit).all()
+
+
 def update_alarm_status(db: Session, alarm_id: int, alarm_status: int):
     """
     更新报警状态
@@ -75,3 +112,32 @@ def delete_alarm(db: Session, alarm_id: int):
         db.delete(alarm)
         db.commit()
     return alarm
+
+
+def delete_alarms_and_related_records(db: Session, alarm_ids: List[int]) -> int:
+    """
+    批量删除告警记录及其关联的处理记录
+
+    Args:
+        db: 数据库会话
+        alarm_ids: 告警ID列表
+
+    Returns:
+        int: 成功删除的告警记录数
+    """
+    deleted_count = 0
+
+    try:
+        # 先删除所有关联的告警处理记录
+        for alarm_id in alarm_ids:
+            db.query(AlarmHandleRecordDB).filter(AlarmHandleRecordDB.alarm_id == alarm_id).delete()
+
+        # 再删除告警记录
+        deleted_count = db.query(AlarmDB).filter(AlarmDB.alarm_id.in_(alarm_ids)).delete(synchronize_session=False)
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise e
+
+    return deleted_count
