@@ -4,15 +4,28 @@
 # 启动 FastAPI 服务；
 # 注册所有业务模块的路由；
 # 加载全局配置（如跨域、中间件）。
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from app.api.v1.endpoints import product  # 导入商品接口路由
 from app.api.v1.endpoints import camera_router  # 导入商品接口路由
 from app.api.v1.endpoints import safety_detection_router  # 导入安全监测路由
 from app.api.v1.endpoints import user_router  # 导入用户接口路由
 from app.api.v1.endpoints import alarm_handle_record_router #导入报警记录接口路由
+from app.services.thread_pool_manager import shutdown_thread_pools
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 启动前要执行的
+    yield
+    # 结束后要执行的
+    shutdown_thread_pools()
+
 
 # 创建 FastAPI 实例
 app = FastAPI(
+    lifespan=lifespan,
     title="园区智能安防系统API",
     description="基于FASTAPI框架的后端服务",
     version="1.0.0"

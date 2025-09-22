@@ -42,7 +42,7 @@ class AlarmService:
             )
             total = len(alarms)
 
-            return Result.SUCCESS(AlarmPageResponse(total, alarms))
+            return Result.SUCCESS(AlarmPageResponse(total=total, alarms=alarms))
         except Exception as e:
             return Result.ERROR(f"查询告警记录失败: {str(e)}")
 

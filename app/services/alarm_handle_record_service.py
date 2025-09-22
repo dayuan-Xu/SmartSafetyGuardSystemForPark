@@ -60,12 +60,11 @@ class AlarmHandleRecordService:
             return Result.ERROR(f"处理记录创建失败: {str(e)}")
 
     @classmethod
-    def upload_attachment(cls, db: Session, attachment_data) -> Result[str]:
+    def upload_attachment(cls, attachment_data) -> Result[str]:
         """
         上传告警处理附件并返回URL
 
         Args:
-            db: 数据库会话
             attachment_data: 附件数据（包含Base64编码的内容和文件扩展名）
 
         Returns:

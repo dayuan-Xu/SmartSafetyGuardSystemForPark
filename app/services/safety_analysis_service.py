@@ -1,7 +1,6 @@
-import cv2
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from typing import Literal, Dict
+import cv2
 from sqlalchemy.orm import Session
 from app.JSON_schemas.Result_pydantic import Result
 from app.crud.alarm_crud import update_alarm_end_time, create_alarm
@@ -11,13 +10,11 @@ from app.objects.alarm_case_tracker import DebouncedAlarmCaseTracker
 from app.services.alarm_broadcast_service import sync_broadcast_alarm
 from app.services.detection_service import DetectionService
 from app.services.storage_service import StorageService
+from app.services.thread_pool_manager import executor as io_executor
 from app.utils.logger import get_logger
 from app.utils.my_utils import get_now
 
 logger = get_logger(__name__)
-
-# 创建线程池用于处理I/O操作
-io_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="IO_Worker")
 
 
 # -------------------------- 安防监控服务 --------------------------
@@ -181,8 +178,6 @@ class SafetyAnalysisService:
             if thread_name in cls.thread_stop_flags:
                 del cls.thread_stop_flags[thread_name]
             logger.info(f"摄像头 {camera_id} 安防分析已停止：处理帧 {frame_count} 帧")
-
-
 
     # -------------------------- 安防检测循环启停方法 --------------------------
     @classmethod

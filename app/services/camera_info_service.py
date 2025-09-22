@@ -1,10 +1,9 @@
+import asyncio
 from typing import List, Optional
-
 import cv2
 from sqlalchemy.orm import Session
 from app.JSON_schemas.Result_pydantic import Result
-from app.JSON_schemas.camera_info_pydantic import CameraInfoResponse, CameraInfoCreate, CameraInfoUpdate, \
-    CameraInfoPageResponse
+from app.JSON_schemas.camera_info_pydantic import CameraInfoResponse, CameraInfoCreate, CameraInfoUpdate,CameraInfoPageResponse
 from app.crud.camera_crud import (
     get_camera_info as crud_get_camera_info,
     get_camera_infos_with_condition as crud_get_camera_infos_with_condition,
@@ -13,9 +12,11 @@ from app.crud.camera_crud import (
     update_camera_info as crud_update_camera_info,
     delete_camera_infos as crud_delete_camera_infos, get_camera_info
 )
+from app.services.thread_pool_manager import executor as db_executor
+
 class CameraInfoService:
     @staticmethod
-    def get_camera_info(db: Session, camera_info_id: int) -> Result[CameraInfoResponse]:
+    async def get_camera_info(db: Session, camera_info_id: int) -> Result[CameraInfoResponse]:
         """
         获取单个摄像头信息
 
@@ -26,20 +27,23 @@ class CameraInfoService:
         Returns:
             Result[CameraInfoResponse]: 包含摄像头信息的响应对象
         """
-        db_camera_info = crud_get_camera_info(db, camera_info_id)
+        # 使用线程池执行数据库操作
+        db_camera_info = await asyncio.get_event_loop().run_in_executor(
+            db_executor, crud_get_camera_info, db, camera_info_id
+        )
         if not db_camera_info:
             return Result.ERROR(f"CameraInfo not found with given id={camera_info_id}")
         return Result.SUCCESS(db_camera_info)
 
     @staticmethod
-    def get_camera_infos_with_condition(
+    async def get_camera_infos_with_condition(
             db: Session,
             park_area: Optional[str] = None,
             analysis_mode: Optional[int] = None,
             camera_status: Optional[int] = None,
             skip: int = 0,
             limit: int = 10
-    ) -> Result[dict]:
+    ) -> Result[CameraInfoPageResponse]:
         """
         根据条件获取摄像头信息（支持分页）
 
@@ -52,20 +56,23 @@ class CameraInfoService:
             limit: 限制返回的记录数
 
         Returns:
-            Result[dict]: 包含摄像头信息列表和分页信息的响应对象
+            Result[CameraInfoPageResponse]: 包含摄像头信息列表和分页信息的响应对象
         """
         try:
-            camera_infos = crud_get_camera_infos_with_condition(
+            # 使用线程池执行数据库操作
+            camera_infos = await asyncio.get_event_loop().run_in_executor(
+                db_executor,
+                crud_get_camera_infos_with_condition,
                 db, park_area, analysis_mode, camera_status, skip, limit
             )
             total = len(camera_infos)
 
-            return Result.SUCCESS(CameraInfoPageResponse(total, camera_infos))
+            return Result.SUCCESS(CameraInfoPageResponse(total=total, cameras=camera_infos))
         except Exception as e:
             return Result.ERROR(f"查询摄像头信息失败: {str(e)}")
 
     @staticmethod
-    def get_all_camera_infos(db: Session, skip: int = 0, limit: int = 10) -> Result[List[CameraInfoResponse]]:
+    async def get_all_camera_infos(db: Session, skip: int = 0, limit: int = 10) -> Result[List[CameraInfoResponse]]:
         """
         获取所有摄像头信息（支持分页）
 
@@ -77,11 +84,14 @@ class CameraInfoService:
         Returns:
             Result[List[CameraInfoResponse]]: 包含摄像头信息列表的响应对象
         """
-        camera_infos = crud_get_all_camera_infos(db, skip=skip, limit=limit)
+        # 使用线程池执行数据库操作
+        camera_infos = await asyncio.get_event_loop().run_in_executor(
+            db_executor, crud_get_all_camera_infos, db, skip, limit
+        )
         return Result.SUCCESS(camera_infos)
 
     @staticmethod
-    def create_camera_info(db: Session, camera_info: CameraInfoCreate) -> Result[CameraInfoResponse]:
+    async def create_camera_info(db: Session, camera_info: CameraInfoCreate) -> Result[CameraInfoResponse]:
         """
         创建新摄像头信息
 
@@ -93,14 +103,16 @@ class CameraInfoService:
             Result[CameraInfoResponse]: 包含创建的摄像头信息的响应对象
         """
         try:
-            created_camera = crud_create_camera_info(db, camera_info)
+            # 使用线程池执行数据库操作
+            created_camera = await asyncio.get_event_loop().run_in_executor(
+                db_executor, crud_create_camera_info, db, camera_info
+            )
             return Result.SUCCESS(created_camera)
         except Exception as e:
             return Result.ERROR(f"创建摄像头信息失败: {str(e)}")
 
     @staticmethod
-    def update_camera_info(db: Session, camera_info_id: int, camera_info_update: CameraInfoUpdate) -> Result[
-        CameraInfoResponse]:
+    async def update_camera_info(db: Session, camera_info_id: int, camera_info_update: CameraInfoUpdate) -> Result[CameraInfoResponse]:
         """
         更新摄像头信息
 
@@ -112,13 +124,16 @@ class CameraInfoService:
         Returns:
             Result[CameraInfoResponse]: 包含更新后的摄像头信息的响应对象
         """
-        db_camera_info = crud_update_camera_info(db, camera_info_id, camera_info_update)
+        # 使用线程池执行数据库操作
+        db_camera_info = await asyncio.get_event_loop().run_in_executor(
+            db_executor, crud_update_camera_info, db, camera_info_id, camera_info_update
+        )
         if not db_camera_info:
             return Result.ERROR(f"Update failure: CameraInfo not found with given id={camera_info_id}")
         return Result.SUCCESS(db_camera_info)
 
     @staticmethod
-    def delete_camera_infos(db: Session, camera_info_ids_str: str) -> Result:
+    async def delete_camera_infos(db: Session, camera_info_ids_str: str) -> Result:
         """
         服务层处理摄像头信息删除业务逻辑并构造响应结果
 
@@ -137,8 +152,10 @@ class CameraInfoService:
         except ValueError:
             return Result.ERROR("ID参数格式错误，请提供有效的数字ID")
 
-        # 执行批量删除操作
-        deleted_count = crud_delete_camera_infos(db, ids)
+        # 使用线程池执行数据库操作
+        deleted_count = await asyncio.get_event_loop().run_in_executor(
+            db_executor, crud_delete_camera_infos, db, ids
+        )
 
         # 构造并返回响应结果
         if deleted_count == 0:
@@ -154,21 +171,25 @@ class CameraInfoService:
                 f"批量删除成功: 共删除{deleted_count}条记录"
             )
 
-        # rtsp流连通性检测方法
+    # rtsp流连通性检测方法
     @classmethod
-    def test_camera_connection(cls, camera_id, db):
-        try:
-            camera_info = get_camera_info(db, camera_id)
-            if not camera_info:
-                return Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
+    async def test_camera_connection(cls, camera_id, db):
+        def _test_connection():
+            try:
+                camera_info = get_camera_info(db, camera_id)
+                if not camera_info:
+                    return Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
 
-            cap = cv2.VideoCapture(camera_info.rtsp_url)
-            cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 3000)
-            if cap.isOpened():
-                cap.release()
-                return Result.SUCCESS(True, "RTSP流连接成功")
-            else:
-                return Result.ERROR("RTSP流连接失败")
+                cap = cv2.VideoCapture(camera_info.rtsp_url)
+                cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 3000)
+                if cap.isOpened():
+                    cap.release()
+                    return Result.SUCCESS(True, "RTSP流连接成功")
+                else:
+                    return Result.ERROR("RTSP流连接失败")
 
-        except Exception as e:
-            return Result.ERROR(f"测试连接时发生错误: {str(e)}")
+            except Exception as e:
+                return Result.ERROR(f"测试连接时发生错误: {str(e)}")
+
+        # 使用线程池执行阻塞的视频连接测试
+        return await asyncio.get_event_loop().run_in_executor(db_executor, _test_connection,)

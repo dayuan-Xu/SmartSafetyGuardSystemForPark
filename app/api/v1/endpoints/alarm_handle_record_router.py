@@ -35,7 +35,7 @@ def upload_attachment(
     返回:
     - 文件的OSS URL
     """
-    return AlarmHandleRecordService.upload_attachment(db, attachment_data)
+    return AlarmHandleRecordService.upload_attachment(attachment_data)
 
 
 # 3. POST /api/v1/alarm_handle_records：创建告警处理记录
