@@ -1,21 +1,18 @@
-import os
+import cv2
 import threading
-import time
-from typing import Literal, Dict
 from concurrent.futures import ThreadPoolExecutor
+from typing import Literal, Dict
 from sqlalchemy.orm import Session
-from torchgen.api.python import return_type_str_pyi
-
 from app.JSON_schemas.Result_pydantic import Result
 from app.crud.alarm_crud import update_alarm_end_time, create_alarm
 from app.crud.camera_crud import get_camera_info
 from app.objects.alarm_case import AlarmCase
 from app.objects.alarm_case_tracker import DebouncedAlarmCaseTracker
+from app.services.alarm_broadcast_service import sync_broadcast_alarm
 from app.services.detection_service import DetectionService
 from app.services.storage_service import StorageService
-from app.services.alarm_broadcast_service import sync_broadcast_alarm
-from app.utils.my_utils import get_now
 from app.utils.logger import get_logger
+from app.utils.my_utils import get_now
 
 logger = get_logger(__name__)
 
@@ -134,6 +131,59 @@ class SafetyAnalysisService:
                 del cls.thread_stop_flags[thread_name]
             logger.info(f"摄像头 {camera_id} 安防分析已停止：处理帧 {frame_count} 帧")
 
+    @classmethod
+    def _safety_analysis_loop_v2(cls, camera_id: int, rtsp_url: str | int, analysis_mode: Literal[1, 2, 3, 4], db: Session):
+        logger.info(f"安防分析线程已启动，开始检测监控摄像头（id={camera_id}），线程名：{threading.current_thread().name}）")
+        thread_name = f"安防检测- 摄像头ID: {camera_id}, 分析模式: {AlarmCase.descs[analysis_mode-2]}"
+        frame_count = 0
+        cap = cv2.VideoCapture(rtsp_url)
+        try:
+            while cap.isOpened():
+                # 检查停止信号（优先判断，确保及时退出）
+                if cls.thread_stop_flags.get(thread_name, True):
+                    logger.info(f"收到停止信号，停止摄像头 {camera_id}的安防分析")
+                    break
+                ret,frame=cap.read()
+                if ret:
+                    frame_count += 1
+                    if frame_count==2147483647:
+                        frame_count = 0
+                        logger.info("已处理2147483647帧，现重置frame_count为0")
+                    if analysis_mode>=2:
+                        alarm_type = analysis_mode - 2
+                        alarm_case_detected,annotated_frames = DetectionService.detect_alarm_case(frame,alarm_type)
+                        if alarm_case_detected is not None:
+                            alarm_case_source = f"{camera_id}_{alarm_type}"
+                            state_result = cls.alarm_tracker.update_state(alarm_case_source, alarm_case_detected)
+                            # 处理本次状态分析结果
+                            cls.handle_state_result(state_result, camera_id, alarm_type, alarm_case_source, annotated_frames, db)
+                    elif analysis_mode==1:
+                        for analysis_mode_temp in range(2,5):
+                            alarm_type = analysis_mode_temp - 2
+                            alarm_case_detected, annotated_frames = DetectionService.detect_alarm_case(frame, alarm_type)
+                            if alarm_case_detected is not None:
+                                alarm_case_source = f"{camera_id}_{alarm_type}"
+                                state_result = cls.alarm_tracker.update_state(alarm_case_source, alarm_case_detected)
+                                # 处理本次状态分析结果
+                                cls.handle_state_result(state_result, camera_id, alarm_type, alarm_case_source,annotated_frames, db)
+                else:
+                    logger.info(f"摄像头 {camera_id} 无法获取视频帧")
+            logger.info(f"摄像头 {camera_id} 安防分析已停止：处理帧 {frame_count} 帧")
+
+        except Exception as e:
+            logger.error(f"摄像头 {camera_id} 监控异常：{str(e)}")
+        finally:
+            # 释放资源
+            cap.release()
+            # 从线程管理中移除
+            if thread_name in cls.active_threads:
+                del cls.active_threads[thread_name]
+            if thread_name in cls.thread_stop_flags:
+                del cls.thread_stop_flags[thread_name]
+            logger.info(f"摄像头 {camera_id} 安防分析已停止：处理帧 {frame_count} 帧")
+
+
+
     # -------------------------- 安防检测循环启停方法 --------------------------
     @classmethod
     def start_thread(cls, camera_id, rtsp_url, t_mode, db):
@@ -165,6 +215,7 @@ class SafetyAnalysisService:
             """
             # current_script_parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             # rtsp_url = os.path.join(current_script_parent_dir, "test_videos", "all_helmet_but_none_vest.mp4")
+
             rtsp_url = r"D:\D盘桌面\模型测试\all_helmet_but_none_vest.mp4"
             analysis_mode = 3  # 开发阶段，以 人体检测 为例进行安防分析功能验证
             logger.info(f"开启安防分析，视频流：{rtsp_url}, 分析模式：{AlarmCase.descs[analysis_mode-2]}")
@@ -230,6 +281,54 @@ class SafetyAnalysisService:
 
                         # 创建告警记录
                         alarm = create_alarm(db, camera_id, alarm_type, 0, get_now(), snapshot_url)
+                        logger.info(f"已经为摄像头（ID： {camera_id}）创建告警（Alarm ID：{alarm.alarm_id}，告警类型：{AlarmCase.descs[alarm_type]}）")
+
+                        # 绑定告警ID到跟踪器
+                        cls.alarm_tracker.bind_alarm_id(alarm_case_source, alarm.alarm_id)
+                        logger.info(f"已经绑定告警(Alarm ID:{alarm.alarm_id}) 到告警场景状态:{cls.alarm_tracker.alarm_case_states[alarm_case_source]}")
+
+                        # 广播告警
+                        sync_broadcast_alarm(alarm)
+                    except Exception as e:
+                        logger.error(f"处理告警时发生错误: {e}")
+
+                # 提交到后台线程执行，不阻塞主线程
+                io_executor.submit(process_alarm_async)
+
+            elif change_type == "violation_to_normal":
+                # 异步更新告警结束时间（数据库操作）
+                def update_alarm_async():
+                    try:
+                        update_alarm_end_time(
+                            db=db,
+                            alarm_id=state_result["alarm_id"],
+                            alarm_end_time=get_now()
+                        )
+                        logger.info(f"摄像头 {camera_id} 更新告警（ID：{state_result['alarm_id']}）")
+                    except Exception as e:
+                        logger.error(f"更新告警结束时间时发生错误: {e}")
+
+                io_executor.submit(update_alarm_async)
+
+    @classmethod
+    def handle_state_result_v2(cls, state_result, camera_id, alarm_type, alarm_case_source, annotated_frames, db):
+        state_changed = state_result["state_changed"]
+        change_type = state_result["change_type"]
+        if state_changed:
+            if change_type == "normal_to_violation":
+                # 完全异步处理：保存截图、创建告警、广播告警都在后台线程执行
+                def process_alarm_async():
+                    try:
+                        snapshot_urls="" # 包含本次告警的所有经过标注的帧
+                        for annotated_frame in annotated_frames:
+                            # 保存截图到云OSS并获取URL
+                            snapshot_url = StorageService.upload_alarm_snapshot(annotated_frame, camera_id)
+                            snapshot_urls+=snapshot_url
+                            snapshot_urls+=','
+                            logger.info(f"已经保存告警截图到云OSS，访问URL: {snapshot_url}")
+
+                        # 创建告警记录
+                        alarm = create_alarm(db, camera_id, alarm_type, 0, get_now(), snapshot_urls)
                         logger.info(f"已经为摄像头（ID： {camera_id}）创建告警（Alarm ID：{alarm.alarm_id}，告警类型：{AlarmCase.descs[alarm_type]}）")
 
                         # 绑定告警ID到跟踪器

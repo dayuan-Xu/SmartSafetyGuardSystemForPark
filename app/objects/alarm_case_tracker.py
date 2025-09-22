@@ -33,7 +33,12 @@ class DebouncedAlarmCaseTracker:
 
     def update_state(self, alarm_case_source, alarm_case_detected):
         """
-        输入单帧检测结果，返回确认后的当前状态（含防抖逻辑）
+        输入:
+        alarm_case_source:当前告警场景的来源
+        alarm_case_detected:单帧检测结果，True或者False，表示检测到告警场景or没有检测到
+        返回:
+        确认后的当前状态（含防抖逻辑）
+
         返回值：{
             "confirmed_state": bool,          # 确认后的当前状态
             "state_changed": bool,            # 是否确认发生了状态切换

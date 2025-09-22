@@ -27,9 +27,9 @@ class StorageService:
         return filepath
 
     @staticmethod
-    def upload_alarm_snapshot(frame, camera_id):
+    def upload_alarm_snapshot(annotated_frame, camera_id):
         """上传告警截图到云存储"""
-        _, buffer = cv2.imencode('.jpg', frame)
+        _, buffer = cv2.imencode('.jpg', annotated_frame)
         frame_bytes = buffer.tobytes()
         img_name = f"{camera_id}_{get_now_str()}.jpg"
         object_key= generate_unique_object_name(img_name)
