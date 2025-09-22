@@ -35,5 +35,6 @@ class ConnectionManager:
         self.active_connections = valid_connections
         logger.info(f"广播消息完成，有效连接数: {len(self.active_connections)}")
 
+
 # 创建全局WebSocket管理器
 manager = ConnectionManager()

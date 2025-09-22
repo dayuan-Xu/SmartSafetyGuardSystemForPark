@@ -166,7 +166,7 @@ class SafetyAnalysisService:
             # current_script_parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             # rtsp_url = os.path.join(current_script_parent_dir, "test_videos", "all_helmet_but_none_vest.mp4")
             rtsp_url = r"D:\D盘桌面\模型测试\all_helmet_but_none_vest.mp4"
-            analysis_mode = 2
+            analysis_mode = 3  # 开发阶段，以 人体检测 为例进行安防分析功能验证
             logger.info(f"开启安防分析，视频流：{rtsp_url}, 分析模式：{AlarmCase.descs[analysis_mode-2]}")
 
             thread_name = cls.start_thread(camera_id, rtsp_url, analysis_mode, db)

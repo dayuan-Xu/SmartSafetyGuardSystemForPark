@@ -6,6 +6,7 @@ datasets/
 runs/
 app/detection_results/
 app/log
+app/snapshots
 
 # 忽略特定文件
 *.pyc
