@@ -1,4 +1,3 @@
-# WebSocket连接管理模块
 from typing import List
 from fastapi import WebSocket
 from app.utils.logger import get_logger

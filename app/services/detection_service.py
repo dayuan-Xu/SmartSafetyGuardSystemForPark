@@ -14,8 +14,8 @@ class DetectionService:
     # 加载YOLOv11预训练模型（安全帽检测）
     model=YOLO('yolo11n.pt')
 
-    helmet_model=YOLO('yolo11n.pt')
-    vest_model=YOLO('yolo11n.pt')
+    helmet_model=YOLO('yolo11n.pt') # 安全帽检测模型
+    vest_model=YOLO('yolo11n.pt') # 反光衣检测模型
     ppe_model=YOLO('yolo11n.pt') # 个人防具检测模型
 
     person_model=YOLO('yolo11n.pt') # 人体检测模型
@@ -45,21 +45,23 @@ class DetectionService:
     def detect_alarm_case(cls,frame, alarm_case_code):
         if alarm_case_code==0:
             logger.info("目标告警场景：安全规范（是否佩戴安全帽、是否穿戴反光衣）")
+
             head_detected=False
-            no_vest_detected=False
             head_class_id=0 # 未戴安全帽的头部在模型训练集中的类别id
-            no_vest_class_id=1 # 未穿反光衣在模型训练集中的类别id
             helmet_result=cls.helmet_model(frame,imgsz=640)[0]
             for box in helmet_result.boxes:
                 class_id = int(box.cls[0])
                 if class_id == head_class_id:
                     head_detected=True
 
+            no_vest_detected=False
+            no_vest_class_id=0 # 未穿反光衣在模型训练集中的类别id
             vest_result=cls.vest_model(frame,imgsz=640)[0]
             for box in vest_result.boxes:
                 class_id = int(box.cls[0])
                 if class_id == no_vest_class_id:
                     no_vest_detected=True
+
             annotated_frames=[helmet_result.plot(),vest_result.plot()]
             return head_detected or no_vest_detected, annotated_frames
         elif alarm_case_code==1:
