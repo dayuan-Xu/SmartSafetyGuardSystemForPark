@@ -4,7 +4,7 @@ from datetime import datetime
 import cv2
 from dotenv import load_dotenv
 
-from app.utils.my_utils import upload_file_on_OSS, get_now_str, generate_unique_object_name
+from app.utils.oss_utils import upload_file_on_OSS, get_now_str, generate_unique_object_name
 
 load_dotenv()
 SNAPSHOT_PATH = os.getenv('SNAPSHOT_PATH')

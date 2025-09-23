@@ -12,7 +12,7 @@ from app.services.detection_service import DetectionService
 from app.services.storage_service import StorageService
 from app.services.thread_pool_manager import executor as io_executor
 from app.utils.logger import get_logger
-from app.utils.my_utils import get_now
+from app.utils.oss_utils import get_now
 
 logger = get_logger(__name__)
 

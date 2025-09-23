@@ -6,21 +6,30 @@
 # 加载全局配置（如跨域、中间件）。
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from app.api.v1.endpoints import product  # 导入商品接口路由
+from fastapi import FastAPI, Depends
+from fastapi.security import OAuth2PasswordRequestForm
+
+from app.JSON_schemas.Result_pydantic import Result
+from app.JSON_schemas.security_pydantic import Token, User
+from app.api.v1.endpoints import alarm_handle_record_router  # 导入报警记录接口路由
 from app.api.v1.endpoints import camera_router  # 导入商品接口路由
+from app.api.v1.endpoints import product  # 导入商品接口路由
 from app.api.v1.endpoints import safety_detection_router  # 导入安全监测路由
 from app.api.v1.endpoints import user_router  # 导入用户接口路由
-from app.api.v1.endpoints import alarm_handle_record_router #导入报警记录接口路由
-from app.services.thread_pool_manager import shutdown_thread_pools
+from app.dependencies.db import get_db
+from app.dependencies.security import get_current_active_user
+from app.services.login_and_self_service import LoginAndSelfService
+from app.services.thread_pool_manager import shutdown_executor
+from app.utils.logger import get_logger
 
+logger=get_logger()
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app66: FastAPI):
     # 启动前要执行的
     yield
     # 结束后要执行的
-    shutdown_thread_pools()
+    shutdown_executor()
 
 
 # 创建 FastAPI 实例
@@ -30,6 +39,43 @@ app = FastAPI(
     description="基于FASTAPI框架的后端服务",
     version="1.0.0"
 )
+
+
+# # 添加日志记录中间件（类似于Java Web中的过滤器）
+# @app.middleware("http")
+# async def log_requests(request: Request, call_next):
+#     # 前置处理 - 请求到达时记录
+#     start_time = time.time()
+#     logger.info(f"收到请求: {request.method} {request.url}")
+#
+#     # 继续处理请求
+#     response = await call_next(request)
+#
+#     # 后置处理 - 响应返回前记录
+#     process_time = time.time() - start_time
+#     logger.info(f"响应状态: {response.status_code} - 处理时间: {process_time:.4f}秒")
+#
+#     return response
+
+
+# 注册登录、个人信息查看的路由
+@app.post("/token", response_model=Result[Token])
+async def login_for_access_token_endpoint(form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(get_db)):
+    result = await LoginAndSelfService.login_for_access_token(form_data, db)
+    return result
+
+@app.get("/users/me", response_model=Result[User])
+async def read_users_me_endpoint(current_user: User = Depends(get_current_active_user)):
+    # 由于 current_user 已经通过依赖验证，直接传给服务层处理
+    result = LoginAndSelfService.get_current_user_info(current_user)
+    return result
+
+@app.get("/users/me/items", response_model=Result)
+async def read_own_items_endpoint(current_user: User = Depends(get_current_active_user)):
+    # 由于 current_user 已经通过依赖验证，直接传给服务层处理
+    result = LoginAndSelfService.get_current_user_items(current_user)
+    return result
+
 
 # 注册路由（给接口加统一前缀 /api/v1，方便版本管理）
 # 这行代码的作用是：
@@ -42,7 +88,7 @@ app.include_router(user_router.router, prefix="/api/v1/users", tags=["用户信�
 app.include_router(camera_router.router, prefix="/api/v1/cameraInfos", tags=["摄像头信息"])
 app.include_router(product.router, prefix="/api/v1/products", tags=["产品信息"])
 
-# 根接口
+# 根路径
 @app.get("/")
 def read_root():
     return {"status": "运行中", "service": "YOLO安全监测系统-MVP"}
@@ -51,4 +97,3 @@ def read_root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="localhost", port=8089)
-

@@ -79,3 +79,17 @@ def delete_users(db: Session, user_ids: List[int]) -> int:
     db.commit()
 
     return deleted_count
+
+
+def get_user_by_username(db, username):
+    """
+    根据用户名查询用户信息
+
+    Args:
+        db: 数据库会话
+        username: 用户名
+
+    Returns:
+        UserDB: 用户信息对象
+    """
+    return db.query(UserDB).filter(UserDB.username == username).first()

@@ -2,7 +2,7 @@ import os
 import time
 from datetime import datetime
 from collections import defaultdict
-from app.utils.my_utils import get_now
+from app.utils.oss_utils import get_now
 
 # 读取防抖配置
 DEBOUNCE_NORMAL_TO_VIOLATION = int(os.getenv("DEBOUNCE_NORMAL_TO_VIOLATION", 2))
