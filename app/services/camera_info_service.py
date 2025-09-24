@@ -67,7 +67,7 @@ class CameraInfoService:
             )
             total = len(camera_infos)
 
-            return Result.SUCCESS(CameraInfoPageResponse(total=total, cameras=camera_infos))
+            return Result.SUCCESS(CameraInfoPageResponse(total=total, rows=camera_infos))
         except Exception as e:
             return Result.ERROR(f"查询摄像头信息失败: {str(e)}")
 

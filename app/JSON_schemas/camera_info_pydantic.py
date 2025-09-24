@@ -20,7 +20,7 @@ class CameraInfoResponse(BaseModel):
 
 class CameraInfoPageResponse(BaseModel):
     total: int
-    cameras: List[CameraInfoResponse]
+    rows: List[CameraInfoResponse]
 
 # ------------------- 请求模型（前端传数据的格式校验）-------------------
 class CameraInfoCreate(BaseModel):

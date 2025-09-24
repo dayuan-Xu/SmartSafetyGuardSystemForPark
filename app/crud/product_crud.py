@@ -37,7 +37,7 @@ def update_product(
         return None  # 商品不存在，返回 None
     # 将更新的字段赋值给数据库实例（只更新非 None 的字段）
     update_data = product_update.model_dump(exclude_unset=True)  # 排除未传的字段
-    for key, value in update_data.items():
+    for key, value in update_data.rows():
         setattr(db_product, key, value)
     # 提交修改
     db.commit()

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status, Path
 from sqlalchemy.orm import Session
 
 from app.JSON_schemas.Result_pydantic import Result
-from app.JSON_schemas.user_pydantic import UserResponse, UserCreate, UserUpdate
+from app.JSON_schemas.user_pydantic import UserResponse, UserCreate, UserUpdate, UserPageResult
 from app.dependencies.db import get_db
 from app.services.user_service import UserService
 
@@ -20,7 +20,7 @@ async def read_user(
     return result
 
 # 2. GET /api/v1/users：获取所有用户信息（支持分页）(需要认证)
-@router.get("/", response_model=Result[List[UserResponse]], summary="获取所有用户信息（支持分页）")
+@router.get("/", response_model=Result[UserPageResult], summary="获取所有用户信息（支持分页）")
 async def read_all_users(
         skip: int = 0,
     limit: int = 10,

@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends
 from fastapi.security import OAuth2PasswordRequestForm
-
+from fastapi.middleware.cors import CORSMiddleware
 from app.JSON_schemas.Result_pydantic import Result
 from app.JSON_schemas.security_pydantic import Token, User
 from app.api.v1.endpoints import alarm_handle_record_router  # 导入报警记录接口路由
@@ -38,6 +38,20 @@ app = FastAPI(
     title="园区智能安防系统API",
     description="基于FASTAPI框架的后端服务",
     version="1.0.0"
+)
+# 配置允许跨域的源（前端地址）
+origins = [
+    "http://localhost:5173",  # 你的前端地址
+    # 若需要，可添加其他允许的源，如 "http://localhost:3000" 等
+]
+
+# 添加 CORS 中间件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # 允许指定的源
+    allow_credentials=True,
+    allow_methods=["*"],    # 允许所有 HTTP 方法（GET/POST 等）
+    allow_headers=["*"],    # 允许所有请求头
 )
 
 

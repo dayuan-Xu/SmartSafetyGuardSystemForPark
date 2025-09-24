@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.DB_models.user_db import UserDB
 from app.JSON_schemas.Result_pydantic import Result
-from app.JSON_schemas.user_pydantic import UserResponse, UserCreate, UserUpdate
+from app.JSON_schemas.user_pydantic import UserResponse, UserCreate, UserUpdate, UserPageResult
 from app.crud.user_crud import (
     get_user as crud_get_user,
     get_all_users as crud_get_all_users,
@@ -13,8 +13,9 @@ from app.crud.user_crud import (
     delete_users as crud_delete_users
 )
 from app.services.thread_pool_manager import executor as db_executor
+from app.utils.logger import get_logger
 
-
+logger=get_logger()
 class UserService:
     """
     用户信息业务逻辑处理类
@@ -41,7 +42,7 @@ class UserService:
         return Result.SUCCESS(data=db_user, msg="获取用户信息成功")
 
     @staticmethod
-    async def get_all_users(db: Session, skip: int = 0, limit: int = 10) -> Result[List[UserResponse]]:
+    async def get_all_users(db: Session, skip: int = 0, limit: int = 10) -> Result[UserPageResult]:
         """
         获取所有用户信息（支持分页）
 
@@ -51,15 +52,18 @@ class UserService:
             limit (int): 每页的记录数
 
         Returns:
-            Result[List[UserResponse]]: 包含用户信息列表或错误信息的统一响应
+            Result[UserPageResult]: 包含用户信息列表或错误信息的统一响应
         """
         try:
             # 使用线程池执行数据库操作
             users = await asyncio.get_event_loop().run_in_executor(
                 db_executor, crud_get_all_users, db, skip, limit
             )
+            total=len(users)
+            users = UserPageResult(total=total, rows=users)
             return Result.SUCCESS(data=users, msg="获取用户列表成功")
         except Exception as e:
+            logger.error(f"获取用户列表失败: {str(e)}")
             return Result.ERROR(msg="获取用户列表失败")
 
     @staticmethod
