@@ -1,6 +1,8 @@
 #  告警广播服务模块
 import asyncio
 import threading
+
+from app.objects.alarm_case import AlarmCase
 from app.services.websocket_manager import manager
 from app.utils.logger import get_logger
 
@@ -31,7 +33,7 @@ async def _async_broadcast_alarm(alarm):
 
 def sync_broadcast_alarm(alarm):
     """同步接口：将告警广播任务提交到全局事件循环（线程安全）"""
-    logger.info(f"广播告警: ID={alarm.alarm_id}, 类型={alarm.alarm_type}")
+    logger.info(f"广播告警: Alarm ID={alarm.alarm_id}, 类型={AlarmCase.descs[alarm.alarm_type]}")
     asyncio.run_coroutine_threadsafe(
         _async_broadcast_alarm(alarm),
         loop=broadcast_loop
