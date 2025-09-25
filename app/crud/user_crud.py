@@ -92,4 +92,4 @@ def get_user_by_username(db, username):
     Returns:
         UserDB: 用户信息对象
     """
-    return db.query(UserDB).filter(UserDB.username == username).first()
+    return db.query(UserDB).filter(UserDB.user_name == username).first()

@@ -5,21 +5,17 @@
 # 注册所有业务模块的路由；
 # 加载全局配置（如跨域、中间件）。
 from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, Depends
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.JSON_schemas.Result_pydantic import Result
-from app.JSON_schemas.security_pydantic import Token, User
 from app.api.v1.endpoints import alarm_handle_record_router  # 导入报警记录接口路由
 from app.api.v1.endpoints import camera_router  # 导入商品接口路由
-from app.api.v1.endpoints import product  # 导入商品接口路由
 from app.api.v1.endpoints import safety_detection_router  # 导入安全监测路由
+from app.api.v1.endpoints import sign_in_or_up_router  # 导入注册登录接口路由
 from app.api.v1.endpoints import user_router  # 导入用户接口路由
-from app.dependencies.db import get_db
-from app.dependencies.security import get_current_active_user
-from app.services.login_and_self_service import LoginAndSelfService
 from app.services.thread_pool_manager import shutdown_executor
+from app.utils.jwt_utils import verify_token
 from app.utils.logger import get_logger
 
 logger=get_logger()
@@ -55,7 +51,44 @@ app.add_middleware(
 )
 
 
-# # 添加日志记录中间件（类似于Java Web中的过滤器）
+# # 全局身份验证中间件
+# @app.middleware("http")
+# async def auth_middleware(request: Request, call_next):
+#     # 排除不需要认证的路径
+#     if request.url.path in ["/", "/docs", "/openapi.json", "/api/v1/token", "/api/v1/register"]:
+#         response = await call_next(request)
+#         return response
+#
+#     # 从请求头获取token
+#     auth_header = request.headers.get("Authorization")
+#     if not auth_header or not auth_header.startswith("Bearer "):
+#         # 返回统一的错误响应格式
+#         result = Result.ERROR(msg="Authorization请求头缺失 or 该请求头内容格式不正确(正确格式：Bearer jwt)")
+#         return JSONResponse(
+#             status_code=401,
+#             content=result.model_dump()
+#         )
+#
+#     token = auth_header.split(" ")[1]
+#
+#     # 验证token
+#     try:
+#         user_info = verify_token(token)
+#         # 将用户信息存储在请求状态中，供后续使用
+#         request.state.user = user_info
+#     except Exception:
+#         # 返回统一的错误响应格式
+#         result = Result.ERROR(msg="Invalid token")
+#         return JSONResponse(
+#             status_code=401,
+#             content=result.model_dump()
+#         )
+#
+#     # 继续处理请求
+#     response = await call_next(request)
+#     return response
+
+# # 日志记录中间件
 # @app.middleware("http")
 # async def log_requests(request: Request, call_next):
 #     # 前置处理 - 请求到达时记录
@@ -71,36 +104,16 @@ app.add_middleware(
 #
 #     return response
 
-
-# 注册登录、个人信息查看的路由
-@app.post("/token", response_model=Result[Token])
-async def login_for_access_token_endpoint(form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(get_db)):
-    result = await LoginAndSelfService.login_for_access_token(form_data, db)
-    return result
-
-@app.get("/users/me", response_model=Result[User])
-async def read_users_me_endpoint(current_user: User = Depends(get_current_active_user)):
-    # 由于 current_user 已经通过依赖验证，直接传给服务层处理
-    result = LoginAndSelfService.get_current_user_info(current_user)
-    return result
-
-@app.get("/users/me/items", response_model=Result)
-async def read_own_items_endpoint(current_user: User = Depends(get_current_active_user)):
-    # 由于 current_user 已经通过依赖验证，直接传给服务层处理
-    result = LoginAndSelfService.get_current_user_items(current_user)
-    return result
-
-
 # 注册路由（给接口加统一前缀 /api/v1，方便版本管理）
 # 这行代码的作用是：
 # 整合接口：将 product.router 中收集的所有接口注册到主应用 app 中
 # 设置访问路径前缀：为所有产品相关接口添加统一前缀 /api/v1/products
 # 版本管理：通过 v1 这样的版本号，方便后续升级 API 版本
-app.include_router(safety_detection_router.router, prefix="/api/v1/safety_analysis", tags=["安全监测"])
+app.include_router(sign_in_or_up_router.router, prefix="/api/v1", tags=["注册登录"])
+app.include_router(safety_detection_router.router, prefix="/api/v1/safety_analysis", tags=["安防分析控制"])
 app.include_router(alarm_handle_record_router.router,prefix="/api/v1/alarm_handle_records",tags=["告警处理记录"])
-app.include_router(user_router.router, prefix="/api/v1/users", tags=["用户信息"])
-app.include_router(camera_router.router, prefix="/api/v1/cameraInfos", tags=["摄像头信息"])
-# app.include_router(product.router, prefix="/api/v1/products", tags=["产品信息"])
+app.include_router(user_router.router, prefix="/api/v1/users", tags=["用户管理"])
+app.include_router(camera_router.router, prefix="/api/v1/cameraInfos", tags=["摄像头管理"])
 
 # 根路径
 @app.get("/")

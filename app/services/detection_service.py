@@ -2,7 +2,7 @@ from pathlib import Path
 from ultralytics import YOLO
 from app.utils.logger import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger()
 # 模型推理服务
 class DetectionService:
     descs = ["安全规范(未戴安全帽、未穿反光衣)", "区域入侵(人)", "火警(火焰、烟雾)"]
@@ -32,10 +32,10 @@ class DetectionService:
     # 使用Path获取项目根目录
     project_root = Path(__file__).parent.parent.parent
     # 构建各个模型文件的路径
-    helmet_model_path = project_root / 'app' / 'helmet_model.pt'
-    vest_model_path = project_root / 'app' / 'vest_model.pt'
-    # person_vehicle_model_path = project_root / 'app' / 'person_vehicle_model.pt'
-    fire_smoke_model_path = project_root / 'app' / 'fire_smoke_model.pt'
+    helmet_model_path = project_root / 'app' / 'models' / 'helmet_model.pt'
+    vest_model_path = project_root / 'app' / 'models' / 'vest_model.pt'
+    # person_vehicle_model_path = project_root / 'app' / 'models' / 'person_vehicle_model.pt'
+    fire_smoke_model_path = project_root / 'app' / 'models' / 'fire_smoke_model.pt'
 
     helmet_model = YOLO(helmet_model_path)  # 安全帽检测模型
     vest_model = YOLO(vest_model_path)  # 反光衣检测模型

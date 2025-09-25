@@ -6,7 +6,7 @@ from app.objects.alarm_case import AlarmCase
 from app.services.websocket_manager import manager
 from app.utils.logger import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 # -------------------------- 全局异步广播任务处理（使用独立线程运行事件循环，避免与FastAPI主线程冲突） --------------------------
 # 1. 创建独立的asyncio事件循环，专门处理WebSocket广播（避免与FastAPI主循环冲突）

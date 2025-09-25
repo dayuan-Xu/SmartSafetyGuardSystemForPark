@@ -9,7 +9,10 @@ from app.config.security_config import SECRET_KEY, ALGORITHM
 from app.crud.user_crud import get_user_by_username as crud_get_user_by_username
 from app.dependencies.db import get_db
 
-# OAuth2 密码流
+# 创建了一个 OAuth2 密码流的认证方案，本质上是一个特殊函数对象
+# 使用它进行依赖注入时，它能告诉 FastAPI 这个接口需要 Bearer Token 认证
+# 当请求到达时，FastAPI 会调用该对象自动从请求头中提取 Authorization: Bearer <token> 字段
+# 提取出的 token 字符串会被返回
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 async def get_current_user(

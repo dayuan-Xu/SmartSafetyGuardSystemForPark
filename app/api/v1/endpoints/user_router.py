@@ -1,4 +1,4 @@
-from typing import List, Annotated
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, status, Path
 from sqlalchemy.orm import Session
@@ -10,7 +10,7 @@ from app.services.user_service import UserService
 
 router = APIRouter()
 
-# 1. GET /api/v1/users/{user_id}：获取单个用户信息 (需要认证)
+# 1. GET /api/v1/users/{user_id}：获取单个用户信息  
 @router.get("/{user_id}", response_model=Result[UserResponse], summary="获取单个用户信息")
 async def read_user(
     user_id: int,
@@ -19,7 +19,7 @@ async def read_user(
     result = await UserService.get_user(db, user_id)
     return result
 
-# 2. GET /api/v1/users：获取所有用户信息（支持分页）(需要认证)
+# 2. GET /api/v1/users：获取所有用户信息（支持分页） 
 @router.get("/", response_model=Result[UserPageResult], summary="获取所有用户信息（支持分页）")
 async def read_all_users(
         skip: int = 0,
@@ -29,7 +29,7 @@ async def read_all_users(
     result = await UserService.get_all_users(db, skip=skip, limit=limit)
     return result
 
-# 3. POST /api/v1/users：创建新用户 (需要认证)
+# 3. POST /api/v1/users：创建新用户  
 @router.post("/", response_model=Result[UserResponse], status_code=status.HTTP_201_CREATED, summary="创建新用户")
 async def create_new_user(
     user: UserCreate,
@@ -38,7 +38,7 @@ async def create_new_user(
     result = await UserService.create_user(db, user)
     return result
 
-# 4. PUT /api/v1/users/{user_id}：修改用户信息 (需要认证)
+# 4. PUT /api/v1/users/{user_id}：修改用户信息  
 @router.put("/{user_id}", response_model=Result[UserResponse], summary="修改用户信息")
 async def update_existing_user(
     user_id: int,
@@ -48,7 +48,7 @@ async def update_existing_user(
     result = await UserService.update_user(db, user_id, user_update)
     return result
 
-# 5. DELETE /api/v1/users/{user_ids}：删除用户信息（支持单个或批量删除）(需要认证)
+# 5. DELETE /api/v1/users/{user_ids}：删除用户信息（支持单个或批量删除） 
 @router.delete("/{user_ids}", response_model=Result, status_code=status.HTTP_200_OK, summary="删除用户信息（支持单个或批量删除）")
 async def remove_user(
     user_ids: Annotated[str, Path(min_length=1, title="用户ID列表", description="用户ID列表，多个ID之间用英文逗号分隔")],

@@ -10,6 +10,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def verify_password(plain_password, hashed_password):
     """
     验证明文密码与哈希密码是否匹配
+    passlib库会从hashed_password字符串中自动提取出之前存储的salt
+    使用提取出的salt对plain_password进行相同的哈希计算
+    将计算结果与存储的哈希值进行比较
     
     Args:
         plain_password: 明文密码

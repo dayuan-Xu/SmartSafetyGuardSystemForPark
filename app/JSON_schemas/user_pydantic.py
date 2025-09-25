@@ -17,6 +17,12 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 # ------------------- 请求模型（前端传数据的格式校验）-------------------
+
+class UserRegister(BaseModel):
+    user_name: str = Field(..., min_length=1, max_length=64, description="用户名")
+    phone: str = Field(..., min_length=11, max_length=11, description="手机号")
+    password: str  = Field(..., min_length=6, max_length=128, description="用户密码")
+
 class UserCreate(BaseModel):
     user_name: str = Field(..., min_length=1, max_length=64, description="用户名")
     name: str = Field(..., min_length=1, max_length=64, description="用户姓名")

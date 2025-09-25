@@ -1,5 +1,5 @@
 import asyncio
-from typing import List
+
 from sqlalchemy.orm import Session
 
 from app.DB_models.user_db import UserDB
@@ -92,7 +92,7 @@ class UserService:
             # 使用线程池执行数据库操作
             return await asyncio.get_event_loop().run_in_executor(db_executor, _create_user)
         except Exception as e:
-            return Result.ERROR(msg="创建用户失败")
+            return Result.ERROR(msg=f"创建用户失败，{e}")
 
     @staticmethod
     async def update_user(db: Session, user_id: int, user_update: UserUpdate) -> Result[UserResponse]:
@@ -153,3 +153,4 @@ class UserService:
                 {"deleted_count": deleted_count},
                 f"批量删除成功: 共删除{deleted_count}条记录"
             )
+
