@@ -100,7 +100,7 @@ app.include_router(safety_detection_router.router, prefix="/api/v1/safety_analys
 app.include_router(alarm_handle_record_router.router,prefix="/api/v1/alarm_handle_records",tags=["告警处理记录"])
 app.include_router(user_router.router, prefix="/api/v1/users", tags=["用户信息"])
 app.include_router(camera_router.router, prefix="/api/v1/cameraInfos", tags=["摄像头信息"])
-app.include_router(product.router, prefix="/api/v1/products", tags=["产品信息"])
+# app.include_router(product.router, prefix="/api/v1/products", tags=["产品信息"])
 
 # 根路径
 @app.get("/")
@@ -110,4 +110,4 @@ def read_root():
 # 启动服务（开发环境用，生产环境用 uvicorn 命令启动）
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="localhost", port=8089)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8089)
