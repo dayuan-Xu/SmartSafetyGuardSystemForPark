@@ -36,7 +36,7 @@ class DetectionService:
     helmet_model_path = project_root / 'app' / 'models' / 'helmet_model.pt'
     vest_model_path = project_root / 'app' / 'models' / 'vest_model.pt'
     person_vehicle_model_path = project_root / 'app' / 'models' / 'yolo11s.pt'
-    fire_smoke_model_path = project_root / 'app' / 'models' / 'fire_smoke_model.pt'
+    fire_smoke_model_path = project_root / 'app' / 'models' / 'fire_smoke_seg_model.pt'
 
     helmet_model = YOLO(helmet_model_path)  # 安全帽检测模型
     vest_model = YOLO(vest_model_path)  # 反光衣检测模型

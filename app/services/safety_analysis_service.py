@@ -223,8 +223,7 @@ class SafetyAnalysisService:
             # rtsp_url= camera_info.rtsp_url
 
             # 分析模式: 0-无，1-全部，2-安全规范， 3-区域入侵， 4-火警
-            # analysis_mode = camera_info.analysis_mode
-            analysis_mode=3 # 开发阶段默认分析模式为区域入侵
+            analysis_mode = camera_info.analysis_mode
 
             # 测试时，服务器本地视频充当实时视频流
             project_root = Path(__file__).parent.parent.parent
