@@ -11,7 +11,7 @@ class DetectionService:
     desc_and_code = {"安全规范": 0, "区域入侵": 1, "火警": 2}
 
     # 加载训练模型（认为该模型能够检测出所有场景中的所有类别的目标）
-    model=YOLO('yolo11n.pt')
+    model=YOLO('yolo11s.pt')
 
     # 人体类别ID
     person_class_id = 0
