@@ -44,7 +44,7 @@ def update_user(
         return None  # 用户信息不存在，返回 None
     # 将更新的字段赋值给数据库实例（只更新非 None 的字段）
     update_data = user_update.model_dump(exclude_unset=True)  # 排除未传的字段
-    for key, value in update_data.items():
+    for key, value in update_data.rows():
         setattr(db_user, key, value)
     # 提交修改
     db.commit()
@@ -79,3 +79,17 @@ def delete_users(db: Session, user_ids: List[int]) -> int:
     db.commit()
 
     return deleted_count
+
+
+def get_user_by_username(db, username):
+    """
+    根据用户名查询用户信息
+
+    Args:
+        db: 数据库会话
+        username: 用户名
+
+    Returns:
+        UserDB: 用户信息对象
+    """
+    return db.query(UserDB).filter(UserDB.user_name == username).first()

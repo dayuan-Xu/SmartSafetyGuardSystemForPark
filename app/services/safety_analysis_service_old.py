@@ -12,7 +12,7 @@ from app.objects.alarm_case import AlarmCase
 from app.objects.alarm_case_tracker import DebouncedAlarmCaseTracker
 from app.services.detection_service import DetectionService
 from app.services.storage_service import StorageService
-from app.utils.my_utils import get_now
+from app.utils.oss_utils import get_now
 
 
 # -------------------------- 1. WebSocket管理器，提供连接、断开连接、发送个人消息和广播消息的功能 --------------------------

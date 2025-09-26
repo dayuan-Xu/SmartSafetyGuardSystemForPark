@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.DB_models.alarm_handle_record_db import AlarmHandleRecordDB
 from typing import Optional, List
+from app.JSON_schemas.alarm_handle_record_pydantic import AlarmHandleRecordCreate
 
 from app.JSON_schemas.alarm_handle_record_pydantic import AlarmHandleRecordCreate
 

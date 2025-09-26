@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from typing import Optional
 
@@ -8,11 +9,12 @@ from app.crud.alarm_crud import (
     get_alarms_with_condition as crud_get_alarms_with_condition,
     delete_alarms_and_related_records as crud_delete_alarms_and_related_records
 )
+from app.services.thread_pool_manager import executor as db_executor
 
 
 class AlarmService:
     @staticmethod
-    def get_alarms_with_condition(
+    async def get_alarms_with_condition(
         db: Session,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
@@ -37,17 +39,20 @@ class AlarmService:
             Result[dict]: 包含告警记录列表的响应对象
         """
         try:
-            alarms = crud_get_alarms_with_condition(
+            # 使用线程池执行数据库操作
+            alarms = await asyncio.get_event_loop().run_in_executor(
+                db_executor, 
+                crud_get_alarms_with_condition,
                 db, start_time, end_time, alarm_type, alarm_status, skip, limit
             )
             total = len(alarms)
 
-            return Result.SUCCESS(AlarmPageResponse(total, alarms))
+            return Result.SUCCESS(AlarmPageResponse(total=total, rows=alarms))
         except Exception as e:
             return Result.ERROR(f"查询告警记录失败: {str(e)}")
 
     @staticmethod
-    def delete_alarms(db: Session, alarm_ids_str: str) -> Result:
+    async def delete_alarms(db: Session, alarm_ids_str: str) -> Result:
         """
         批量删除告警记录及其关联的处理记录
 
@@ -67,8 +72,12 @@ class AlarmService:
             return Result.ERROR("ID参数格式错误，请提供有效的数字ID")
 
         try:
-            # 执行批量删除操作
-            deleted_count = crud_delete_alarms_and_related_records(db, ids)
+            # 使用线程池执行数据库操作
+            deleted_count = await asyncio.get_event_loop().run_in_executor(
+                db_executor,
+                crud_delete_alarms_and_related_records,
+                db, ids
+            )
 
             # 构造并返回响应结果
             if deleted_count == 0:

@@ -22,7 +22,7 @@ class AlarmResponse(AlarmBase):
 
 class AlarmPageResponse(BaseModel):
     total: int
-    alarms: List[AlarmResponse]
+    rows: List[AlarmResponse]
 
 
 class AlarmQueryParams(BaseModel):
