@@ -15,6 +15,19 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        # API 文档示例数据
+        json_schema_extra = {
+            "example": {
+                "user_id": 1,
+                "user_name": "zhangsan",
+                "name": "张三",
+                "gender": 1,
+                "user_role": 2,
+                "phone": "13800138000",
+                "create_time": "2023-01-01T10:00:00",
+                "update_time": "2023-01-01T10:00:00"
+            }
+        }
 
 # ------------------- 请求模型（前端传数据的格式校验）-------------------
 
@@ -22,6 +35,16 @@ class UserRegister(BaseModel):
     user_name: str = Field(..., min_length=1, max_length=64, description="用户名")
     phone: str = Field(..., min_length=11, max_length=11, description="手机号")
     password: str  = Field(..., min_length=6, max_length=128, description="用户密码")
+    
+    class Config:
+        # API 文档示例数据
+        json_schema_extra = {
+            "example": {
+                "user_name": "zhangsan",
+                "phone": "13800138000",
+                "password": "password123"
+            }
+        }
 
 class UserCreate(BaseModel):
     user_name: str = Field(..., min_length=1, max_length=64, description="用户名")
@@ -42,3 +65,33 @@ class UserUpdate(BaseModel):
 class UserPageResult(BaseModel):
     total: int
     rows: List[UserResponse]
+    
+    class Config:
+        # API 文档示例数据
+        json_schema_extra = {
+            "example": {
+                "total": 2,
+                "rows": [
+                    {
+                        "user_id": 1,
+                        "user_name": "zhangsan",
+                        "name": "张三",
+                        "gender": 1,
+                        "user_role": 2,
+                        "phone": "13800138000",
+                        "create_time": "2023-01-01T10:00:00",
+                        "update_time": "2023-01-01T10:00:00"
+                    },
+                    {
+                        "user_id": 2,
+                        "user_name": "lisi",
+                        "name": "李四",
+                        "gender": 0,
+                        "user_role": 2,
+                        "phone": "13800138001",
+                        "create_time": "2023-01-02T10:00:00",
+                        "update_time": "2023-01-02T10:00:00"
+                    }
+                ]
+            }
+        }

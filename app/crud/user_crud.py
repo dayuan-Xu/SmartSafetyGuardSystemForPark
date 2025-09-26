@@ -19,8 +19,27 @@ def get_user(db: Session, user_id: int) -> Optional[UserDB]:
     return db.query(UserDB).filter(UserDB.user_id == user_id).first()
 
 # 2. 查：获取所有用户信息（支持分页，默认取 10 条）
-def get_all_users(db: Session, skip: int = 0, limit: int = 10) -> List[UserDB]:
-    return db.query(UserDB).offset(skip).limit(limit).all()
+def get_all_users(db: Session, skip: int = 0, limit: int = 10, 
+                 name: str = None, gender: int = None,
+                 start_time: str = None, end_time: str = None) -> List[UserDB]:
+    query = db.query(UserDB)
+    
+    # 根据姓名筛选
+    if name:
+        query = query.filter(UserDB.name.like(f"%{name}%"))
+    
+    # 根据性别筛选
+    if gender is not None:
+        query = query.filter(UserDB.gender == gender)
+    
+    # 根据入职时间范围筛选
+    if start_time:
+        query = query.filter(UserDB.create_time >= start_time)
+    
+    if end_time:
+        query = query.filter(UserDB.create_time <= end_time)
+    
+    return query.offset(skip).limit(limit).all()
 
 # 3. 增：创建新用户
 def create_user(db: Session, user: UserCreate) -> UserDB:

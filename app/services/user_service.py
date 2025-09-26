@@ -42,7 +42,9 @@ class UserService:
         return Result.SUCCESS(data=db_user, msg="获取用户信息成功")
 
     @staticmethod
-    async def get_all_users(db: Session, skip: int = 0, limit: int = 10) -> Result[UserPageResult]:
+    async def get_users(db: Session, skip: int = 0, limit: int = 10, 
+                            name: str = None, gender: int = None,
+                            start_time: str = None, end_time: str = None) -> Result[UserPageResult]:
         """
         获取所有用户信息（支持分页）
 
@@ -50,6 +52,10 @@ class UserService:
             db (Session): 数据库会话
             skip (int): 跳过的记录数
             limit (int): 每页的记录数
+            name (str): 用户姓名筛选条件
+            gender (int): 用户性别筛选条件
+            start_time (str): 入职时间左边界
+            end_time (str): 入职时间右边界
 
         Returns:
             Result[UserPageResult]: 包含用户信息列表或错误信息的统一响应
@@ -57,7 +63,7 @@ class UserService:
         try:
             # 使用线程池执行数据库操作
             users = await asyncio.get_event_loop().run_in_executor(
-                db_executor, crud_get_all_users, db, skip, limit
+                db_executor, crud_get_all_users, db, skip, limit, name, gender, start_time, end_time
             )
             total=len(users)
             users = UserPageResult(total=total, rows=users)

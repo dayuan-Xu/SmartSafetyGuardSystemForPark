@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from app.JSON_schemas.Result_pydantic import Result
 from app.api.v1.endpoints import alarm_handle_record_router  # 导入报警记录接口路由
 from app.api.v1.endpoints import camera_router  # 导入商品接口路由
-from app.api.v1.endpoints import safety_detection_router  # 导入安全监测路由
+from app.api.v1.endpoints import safety_analysis_router  # 导入安全分析路由
 from app.api.v1.endpoints import sign_in_or_up_router  # 导入注册登录接口路由
 from app.api.v1.endpoints import user_router  # 导入用户接口路由
 from app.services.thread_pool_manager import shutdown_executor
@@ -110,7 +110,7 @@ app.add_middleware(
 # 设置访问路径前缀：为所有产品相关接口添加统一前缀 /api/v1/products
 # 版本管理：通过 v1 这样的版本号，方便后续升级 API 版本
 app.include_router(sign_in_or_up_router.router, prefix="/api/v1", tags=["注册登录"])
-app.include_router(safety_detection_router.router, prefix="/api/v1/safety_analysis", tags=["安防分析控制"])
+app.include_router(safety_analysis_router.router, prefix="/api/v1/safety_analysis", tags=["安防分析控制"])
 app.include_router(alarm_handle_record_router.router,prefix="/api/v1/alarm_handle_records",tags=["告警处理记录"])
 app.include_router(user_router.router, prefix="/api/v1/users", tags=["用户管理"])
 app.include_router(camera_router.router, prefix="/api/v1/cameraInfos", tags=["摄像头管理"])

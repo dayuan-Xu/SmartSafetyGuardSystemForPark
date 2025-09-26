@@ -1,12 +1,10 @@
 import asyncio
 from datetime import timedelta
 from typing import Union
-
 from fastapi import HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.exc import IntegrityError as SQLIntegrityError
 from sqlalchemy.orm import Session
-
 from app.DB_models.user_db import UserDB
 from app.JSON_schemas.Result_pydantic import Result
 from app.JSON_schemas.security_pydantic import Token
@@ -47,7 +45,7 @@ class SignInOrUpService:
         return db_user
 
     @staticmethod
-    async def register_user(db: Session, user: UserRegister) -> Result:
+    async def register_user(db: Session, user: UserRegister) -> Result[Token]:
         """
         用户注册功能
 

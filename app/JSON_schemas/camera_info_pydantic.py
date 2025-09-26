@@ -17,10 +17,56 @@ class CameraInfoResponse(BaseModel):
     # 允许 Pydantic 模型从 SQLAlchemy 模型（CameraInfoDB）实例中读取数据
     class Config:
         from_attributes = True
+        # API 文档示例数据
+        json_schema_extra = {
+            "example": {
+                "camera_id": 1,
+                "camera_name": "东门摄像头",
+                "park_area": "东区",
+                "install_position": "东门岗亭上方",
+                "rtsp_url": "rtsp://192.168.1.1:554/live.sdp",
+                "analysis_mode": 1,
+                "camera_status": 1,
+                "create_time": "2023-01-01T10:00:00",
+                "update_time": "2023-01-01T10:00:00"
+            }
+        }
 
 class CameraInfoPageResponse(BaseModel):
     total: int
     rows: List[CameraInfoResponse]
+    
+    class Config:
+        # API 文档示例数据
+        json_schema_extra = {
+            "example": {
+                "total": 2,
+                "rows": [
+                    {
+                        "camera_id": 1,
+                        "camera_name": "东门摄像头",
+                        "park_area": "东区",
+                        "install_position": "东门岗亭上方",
+                        "rtsp_url": "rtsp://192.168.1.1:554/live.sdp",
+                        "analysis_mode": 1,
+                        "camera_status": 1,
+                        "create_time": "2023-01-01T10:00:00",
+                        "update_time": "2023-01-01T10:00:00"
+                    },
+                    {
+                        "camera_id": 2,
+                        "camera_name": "西门摄像头",
+                        "park_area": "西区",
+                        "install_position": "西门岗亭上方",
+                        "rtsp_url": "rtsp://192.168.1.2:554/live.sdp",
+                        "analysis_mode": 2,
+                        "camera_status": 1,
+                        "create_time": "2023-01-01T11:00:00",
+                        "update_time": "2023-01-01T11:00:00"
+                    }
+                ]
+            }
+        }
 
 # ------------------- 请求模型（前端传数据的格式校验）-------------------
 class CameraInfoCreate(BaseModel):

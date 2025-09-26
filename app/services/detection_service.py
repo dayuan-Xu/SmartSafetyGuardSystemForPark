@@ -5,13 +5,16 @@ from app.utils.logger import get_logger
 logger = get_logger()
 # 模型推理服务
 class DetectionService:
+    # 使用Path获取项目根目录
+    project_root = Path(__file__).parent.parent.parent
+
     descs = ["安全规范(未戴安全帽、未穿反光衣)", "区域入侵(人)", "火警(火焰、烟雾)"]
 
     # 告警类型描述+编码，对应AlarmDB中alarm_type字段
     desc_and_code = {"安全规范": 0, "区域入侵": 1, "火警": 2}
 
     # 加载训练模型（认为该模型能够检测出所有场景中的所有类别的目标）
-    model=YOLO('yolo11s.pt')
+    model=YOLO(project_root / 'app' / 'models' / 'yolo11s.pt')
 
     # 人体类别ID
     person_class_id = 0
@@ -29,17 +32,15 @@ class DetectionService:
     # 置信度阈值
     confidence_threshold = 0.5
 
-    # 使用Path获取项目根目录
-    project_root = Path(__file__).parent.parent.parent
     # 构建各个模型文件的路径
     helmet_model_path = project_root / 'app' / 'models' / 'helmet_model.pt'
     vest_model_path = project_root / 'app' / 'models' / 'vest_model.pt'
-    # person_vehicle_model_path = project_root / 'app' / 'models' / 'person_vehicle_model.pt'
+    person_vehicle_model_path = project_root / 'app' / 'models' / 'yolo11s.pt'
     fire_smoke_model_path = project_root / 'app' / 'models' / 'fire_smoke_model.pt'
 
     helmet_model = YOLO(helmet_model_path)  # 安全帽检测模型
     vest_model = YOLO(vest_model_path)  # 反光衣检测模型
-    person_vehicle_model = YOLO('yolo11s.pt')  # 人体车辆检测模型，这里直接使用COCO数据集上预训练的yolo11s模型即可
+    person_vehicle_model = YOLO(person_vehicle_model_path)  # 人体车辆检测模型，这里直接使用COCO数据集上预训练的yolo11s模型即可
     fire_smoke_model = YOLO(fire_smoke_model_path)  # 火焰烟雾检测模型
 
     @classmethod

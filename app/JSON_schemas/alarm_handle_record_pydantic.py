@@ -18,6 +18,20 @@ class AlarmHandleRecordResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        # API 文档示例数据
+        json_schema_extra = {
+            "example": {
+                "handle_id": 1,
+                "alarm_id": 101,
+                "handle_time": "2023-01-01T10:00:00",
+                "handler_user_id": 1,
+                "handle_action": 2,
+                "handle_content": "已派遣人员处理",
+                "handle_attachment_url": "https://oss.example.com/attachment.jpg",
+                "create_time": "2023-01-01T10:00:00",
+                "update_time": "2023-01-01T10:00:00"
+            }
+        }
 
 # ------------------- 请求模型（接收前端请求数据的格式）-------------------
 class AlarmHandleRecordCreate(BaseModel):
