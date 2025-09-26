@@ -105,8 +105,6 @@ async def update_existing_camera_info(
     camera_info_id: Annotated[int, Path(title="摄像头信息ID", description="摄像头信息唯一标识")],
     camera_info_update: CameraInfoUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-
 ):
     """
     修改摄像头信息
@@ -115,12 +113,10 @@ async def update_existing_camera_info(
         camera_info_id (int): 摄像头信息唯一标识
         camera_info_update (CameraInfoUpdate): 摄像头信息更新数据
         db (Session): 数据库会话
-        current_user (User): 当前登录用户信息
 
     Returns:
         Result[CameraInfoResponse]: 包含更新后的摄像头信息的统一响应结果
     """
-    print("current_user:", current_user)
     result = await CameraInfoService.update_camera_info(db, camera_info_id, camera_info_update)
     return result
 

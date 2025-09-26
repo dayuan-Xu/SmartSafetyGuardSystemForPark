@@ -3,6 +3,8 @@ from app.DB_models.user_db import UserDB  # 数据库模型
 from app.JSON_schemas.user_pydantic import UserCreate, UserUpdate  # 请求模型
 from typing import Optional, List
 
+from app.utils.password_utils import get_password_hash
+
 """
 UserDB 模型的含义:
     类级别代表整张表
@@ -44,6 +46,8 @@ def get_all_users(db: Session, skip: int = 0, limit: int = 10,
 # 3. 增：创建新用户
 def create_user(db: Session, user: UserCreate) -> UserDB:
     # 1. 将 Pydantic 模型（UserCreate）转成 SQLAlchemy 模型（UserDB）
+    if user.password:
+        user.password = get_password_hash(user.password)
     db_user = UserDB(**user.model_dump())
     # 2. 提交到数据库
     db.add(db_user)
@@ -63,7 +67,10 @@ def update_user(
         return None  # 用户信息不存在，返回 None
     # 将更新的字段赋值给数据库实例（只更新非 None 的字段）
     update_data = user_update.model_dump(exclude_unset=True)  # 排除未传的字段
-    for key, value in update_data.rows():
+    # 明文密码哈希化
+    if update_data.get("password"):
+        update_data["password"] = get_password_hash(update_data["password"])
+    for key, value in update_data.items():
         setattr(db_user, key, value)
     # 提交修改
     db.commit()

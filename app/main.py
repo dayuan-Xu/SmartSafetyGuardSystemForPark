@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.JSON_schemas.Result_pydantic import Result
 from app.api.v1.endpoints import alarm_handle_record_router  # 导入报警记录接口路由
+from app.api.v1.endpoints import alarm_router  # 导入告警记录接口路由
 from app.api.v1.endpoints import camera_router  # 导入商品接口路由
 from app.api.v1.endpoints import safety_analysis_router  # 导入安全分析路由
 from app.api.v1.endpoints import sign_in_or_up_router  # 导入注册登录接口路由
@@ -112,6 +113,7 @@ app.add_middleware(
 app.include_router(sign_in_or_up_router.router, prefix="/api/v1", tags=["注册登录"])
 app.include_router(safety_analysis_router.router, prefix="/api/v1/safety_analysis", tags=["安防分析控制"])
 app.include_router(alarm_handle_record_router.router,prefix="/api/v1/alarm_handle_records",tags=["告警处理记录"])
+app.include_router(alarm_router.router,prefix="/api/v1/alarms",tags=["告警记录"])
 app.include_router(user_router.router, prefix="/api/v1/users", tags=["用户管理"])
 app.include_router(camera_router.router, prefix="/api/v1/cameraInfos", tags=["摄像头管理"])
 
