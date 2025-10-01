@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, List
 
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, and_
 from app.DB_models.alarm_db import AlarmDB
 from app.DB_models.alarm_handle_record_db import AlarmHandleRecordDB
 from app.DB_models.camera_info_db import CameraInfoDB
@@ -61,6 +61,16 @@ def get_alarms_with_condition(
     """
     根据条件获取报警记录列表（支持分页），包含摄像头信息和处理记录信息
     """
+    # 构建子查询，获取每个alarm_id的最新处理记录
+    latest_handle_subquery = (
+        db.query(
+            AlarmHandleRecordDB.alarm_id,
+            func.max(AlarmHandleRecordDB.handle_time).label('latest_handle_time')
+        )
+        .group_by(AlarmHandleRecordDB.alarm_id)
+        .subquery()
+    )
+
     # 构建联表查询
     query = db.query(
         AlarmDB,
@@ -72,7 +82,14 @@ def get_alarms_with_condition(
     ).outerjoin(
         ParkAreaDB, CameraInfoDB.park_area_id == ParkAreaDB.park_area_id
     ).outerjoin(
-        AlarmHandleRecordDB, AlarmDB.alarm_id == AlarmHandleRecordDB.alarm_id
+        latest_handle_subquery, 
+        AlarmDB.alarm_id == latest_handle_subquery.c.alarm_id
+    ).outerjoin(
+        AlarmHandleRecordDB,
+        and_(
+            AlarmDB.alarm_id == AlarmHandleRecordDB.alarm_id,
+            AlarmHandleRecordDB.handle_time == latest_handle_subquery.c.latest_handle_time
+        )
     ).outerjoin(
         UserDB, AlarmHandleRecordDB.handler_user_id == UserDB.user_id
     )
@@ -109,7 +126,10 @@ def get_alarms_with_condition(
         UserDB.name
     )
 
-    return query.offset(skip).limit(limit).all()
+    # 返回计数和分页结果
+    count = query.count()
+    alarms_with_details = query.offset(skip).limit(limit).all()
+    return count, alarms_with_details
 
 
 def update_alarm_status(db: Session, alarm_id: int, alarm_status: int):

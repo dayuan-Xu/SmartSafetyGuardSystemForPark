@@ -1,20 +1,23 @@
 import asyncio
 import threading
-from typing import List, Optional
+from typing import Optional
+
 import cv2
 from sqlalchemy.orm import Session
+
 from app.JSON_schemas.Result_pydantic import Result
-from app.JSON_schemas.camera_info_pydantic import CameraInfoResponse, CameraInfoCreate, CameraInfoUpdate,CameraInfoPageResponse
+from app.JSON_schemas.camera_info_pydantic import CameraInfoResponse, CameraInfoCreate, CameraInfoUpdate, \
+    CameraInfoPageResponse
 from app.crud.camera_crud import (
-    get_camera_info as crud_get_camera_info,
+    get_camera_info,
     get_camera_infos_with_condition as crud_get_camera_infos_with_condition,
-    get_all_camera_infos as crud_get_all_camera_infos,
     create_camera_info as crud_create_camera_info,
     update_camera_info as crud_update_camera_info,
-    delete_camera_infos as crud_delete_camera_infos, get_camera_info
+    delete_camera_infos as crud_delete_camera_infos
 )
 from app.crud.park_area_crud import get_park_area as crud_get_park_area
 from app.services.thread_pool_manager import executor as db_executor
+
 
 class CameraInfoService:
     @staticmethod
@@ -30,46 +33,30 @@ class CameraInfoService:
             Result[CameraInfoResponse]: 包含摄像头信息的响应对象
         """
         # 使用线程池执行数据库操作
-        db_camera_info = await asyncio.get_event_loop().run_in_executor(
-            db_executor, crud_get_camera_info, db, camera_info_id
+        camera_info_with_park_area = await asyncio.get_event_loop().run_in_executor(
+            db_executor, get_camera_info, db, camera_info_id
         )
-        if not db_camera_info:
+        if not camera_info_with_park_area:
             return Result.ERROR(f"CameraInfo not found with given id={camera_info_id}")
         
-        # 获取园区区域名称
-        park_area_info = await asyncio.get_event_loop().run_in_executor(
-            db_executor, crud_get_park_area, db, db_camera_info.park_area_id
+        # 从联表查询结果中提取信息
+        camera_info = camera_info_with_park_area[0]  # CameraInfoDB instance
+        park_area_name = camera_info_with_park_area[1]  # Park area name
+        
+        # 创建包含园区区域名称的响应对象
+        camera_response = CameraInfoResponse(
+            camera_id=camera_info.camera_id,
+            camera_name=camera_info.camera_name,
+            park_area_id=camera_info.park_area_id,
+            park_area=park_area_name,
+            install_position=camera_info.install_position,
+            rtsp_url=camera_info.rtsp_url,
+            analysis_mode=camera_info.analysis_mode,
+            camera_status=camera_info.camera_status,
+            create_time=camera_info.create_time,
+            update_time=camera_info.update_time
         )
-        if park_area_info:
-            # 创建包含园区区域名称的响应对象
-            camera_response = CameraInfoResponse(
-                camera_id=db_camera_info.camera_id,
-                camera_name=db_camera_info.camera_name,
-                park_area_id=db_camera_info.park_area_id,
-                park_area=park_area_info.park_area,
-                install_position=db_camera_info.install_position,
-                rtsp_url=db_camera_info.rtsp_url,
-                analysis_mode=db_camera_info.analysis_mode,
-                camera_status=db_camera_info.camera_status,
-                create_time=db_camera_info.create_time,
-                update_time=db_camera_info.update_time
-            )
-            return Result.SUCCESS(camera_response)
-        else:
-            # 如果找不到园区区域信息，返回默认值
-            camera_response = CameraInfoResponse(
-                camera_id=db_camera_info.camera_id,
-                camera_name=db_camera_info.camera_name,
-                park_area_id=db_camera_info.park_area_id,
-                park_area="未知区域",
-                install_position=db_camera_info.install_position,
-                rtsp_url=db_camera_info.rtsp_url,
-                analysis_mode=db_camera_info.analysis_mode,
-                camera_status=db_camera_info.camera_status,
-                create_time=db_camera_info.create_time,
-                update_time=db_camera_info.update_time
-            )
-            return Result.SUCCESS(camera_response)
+        return Result.SUCCESS(camera_response)
 
     @staticmethod
     async def get_camera_infos_with_condition(
@@ -95,20 +82,19 @@ class CameraInfoService:
             Result[CameraInfoPageResponse]: 包含摄像头信息列表和分页信息的响应对象
         """
         try:
-            # 使用线程池执行数据库操作
-            camera_infos = await asyncio.get_event_loop().run_in_executor(
-                db_executor,
-                crud_get_camera_infos_with_condition,
-                db, park_area_id, analysis_mode, camera_status, skip, limit
-            )
-            
-            # 获取每个摄像头对应的园区区域名称
-            camera_responses = []
-            for camera_info in camera_infos:
-                park_area_info = await asyncio.get_event_loop().run_in_executor(
-                    db_executor, crud_get_park_area, db, camera_info.park_area_id
+            # 使用线程池执行数据库操作，分别获取符合条件的总记录数和当前页数据
+            total, camera_infos_with_details = await asyncio.get_event_loop().run_in_executor(
+                    db_executor,
+                    crud_get_camera_infos_with_condition,
+                    db, park_area_id, analysis_mode, camera_status, skip, limit
                 )
-                park_area_name = park_area_info.park_area if park_area_info else "未知区域"
+            
+            # 转换查询结果为CameraInfoResponse对象
+            camera_responses = []
+            for camera_info_row in camera_infos_with_details:
+                # 从联表查询结果中提取信息
+                camera_info = camera_info_row[0]  # CameraInfoDB instance
+                park_area_name = camera_info_row[1]  # Park area name
                 
                 camera_response = CameraInfoResponse(
                     camera_id=camera_info.camera_id,
@@ -124,53 +110,9 @@ class CameraInfoService:
                 )
                 camera_responses.append(camera_response)
 
-            total = len(camera_responses)
-
             return Result.SUCCESS(CameraInfoPageResponse(total=total, rows=camera_responses))
         except Exception as e:
             return Result.ERROR(f"查询摄像头信息失败: {str(e)}")
-
-    @staticmethod
-    async def get_all_camera_infos(db: Session, skip: int = 0, limit: int = 10) -> Result[List[CameraInfoResponse]]:
-        """
-        获取所有摄像头信息（支持分页）
-
-        Args:
-            db: 数据库会话
-            skip: 跳过的记录数
-            limit: 限制返回的记录数
-
-        Returns:
-            Result[List[CameraInfoResponse]]: 包含摄像头信息列表的响应对象
-        """
-        # 使用线程池执行数据库操作
-        camera_infos = await asyncio.get_event_loop().run_in_executor(
-            db_executor, crud_get_all_camera_infos, db, skip, limit
-        )
-        
-        # 获取每个摄像头对应的园区区域名称
-        camera_responses = []
-        for camera_info in camera_infos:
-            park_area_info = await asyncio.get_event_loop().run_in_executor(
-                db_executor, crud_get_park_area, db, camera_info.park_area_id
-            )
-            park_area_name = park_area_info.park_area if park_area_info else "未知区域"
-            
-            camera_response = CameraInfoResponse(
-                camera_id=camera_info.camera_id,
-                camera_name=camera_info.camera_name,
-                park_area_id=camera_info.park_area_id,
-                park_area=park_area_name,
-                install_position=camera_info.install_position,
-                rtsp_url=camera_info.rtsp_url,
-                analysis_mode=camera_info.analysis_mode,
-                camera_status=camera_info.camera_status,
-                create_time=camera_info.create_time,
-                update_time=camera_info.update_time
-            )
-            camera_responses.append(camera_response)
-        
-        return Result.SUCCESS(camera_responses)
 
     @staticmethod
     async def create_camera_info(db: Session, camera_info: CameraInfoCreate) -> Result[CameraInfoResponse]:
@@ -192,8 +134,8 @@ class CameraInfoService:
             if not park_area_info:
                 return Result.ERROR(f"园区区域ID {camera_info.park_area_id} 不存在")
             
-            # 使用线程池执行数据库操作
-            created_camera = await asyncio.get_event_loop().run_in_executor(
+            # 使用线程池执行数据库操作，现在返回包含园区区域信息的数据
+            created_camera, park_area_name = await asyncio.get_event_loop().run_in_executor(
                 db_executor, crud_create_camera_info, db, camera_info
             )
             
@@ -202,7 +144,7 @@ class CameraInfoService:
                 camera_id=created_camera.camera_id,
                 camera_name=created_camera.camera_name,
                 park_area_id=created_camera.park_area_id,
-                park_area=park_area_info.park_area,
+                park_area=park_area_name,
                 install_position=created_camera.install_position,
                 rtsp_url=created_camera.rtsp_url,
                 analysis_mode=created_camera.analysis_mode,
@@ -235,18 +177,15 @@ class CameraInfoService:
             if not park_area_info:
                 return Result.ERROR(f"园区区域ID {camera_info_update.park_area_id} 不存在")
         
-        # 使用线程池执行数据库操作
-        db_camera_info = await asyncio.get_event_loop().run_in_executor(
+        # 使用线程池执行数据库操作，现在返回包含园区区域信息的数据
+        result = await asyncio.get_event_loop().run_in_executor(
             db_executor, crud_update_camera_info, db, camera_info_id, camera_info_update
         )
-        if not db_camera_info:
+        if not result:
             return Result.ERROR(f"Update failure: CameraInfo not found with given id={camera_info_id}")
         
-        # 获取园区区域名称
-        park_area_info = await asyncio.get_event_loop().run_in_executor(
-            db_executor, crud_get_park_area, db, db_camera_info.park_area_id
-        )
-        park_area_name = park_area_info.park_area if park_area_info else "未知区域"
+        # 从结果中提取摄像头信息和园区区域名称
+        db_camera_info, park_area_name = result
         
         # 创建包含园区区域名称的响应对象
         camera_response = CameraInfoResponse(

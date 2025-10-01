@@ -7,7 +7,6 @@ from app.JSON_schemas.park_area_pydantic import ParkAreaResponse, ParkAreaCreate
 from app.crud.park_area_crud import (
     get_park_area as crud_get_park_area,
     get_park_areas_with_condition as crud_get_park_areas_with_condition,
-    get_all_park_areas as crud_get_all_park_areas,
     create_park_area as crud_create_park_area,
     update_park_area as crud_update_park_area,
     delete_park_areas as crud_delete_park_areas,
@@ -78,35 +77,18 @@ class ParkAreaService:
         """
         try:
             # 使用线程池执行数据库操作
-            park_areas = await asyncio.get_event_loop().run_in_executor(
+            total, park_areas = await asyncio.get_event_loop().run_in_executor(
                 db_executor,
                 crud_get_park_areas_with_condition,
                 db, park_area, skip, limit
             )
-            total = len(park_areas)
 
-            return Result.SUCCESS(ParkAreaPageResponse(total=total, rows=park_areas))
+            parkAreaPageResponse = ParkAreaPageResponse(total=total, rows=park_areas)
+
+            return Result.SUCCESS(parkAreaPageResponse)
         except Exception as e:
             return Result.ERROR(f"查询园区区域信息失败: {str(e)}")
 
-    @staticmethod
-    async def get_all_park_areas(db: Session, skip: int = 0, limit: int = 10) -> Result[List[ParkAreaResponse]]:
-        """
-        获取所有园区区域信息（支持分页）
-
-        Args:
-            db: 数据库会话
-            skip: 跳过的记录数
-            limit: 限制返回的记录数
-
-        Returns:
-            Result[List[ParkAreaResponse]]: 包含园区区域信息列表的响应对象
-        """
-        # 使用线程池执行数据库操作
-        park_areas = await asyncio.get_event_loop().run_in_executor(
-            db_executor, crud_get_all_park_areas, db, skip, limit
-        )
-        return Result.SUCCESS(park_areas)
 
     @staticmethod
     async def create_park_area(db: Session, park_area: ParkAreaCreate) -> Result[ParkAreaResponse]:

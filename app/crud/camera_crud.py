@@ -1,4 +1,5 @@
-from typing import Optional, List
+from datetime import datetime
+from typing import Optional, List, Tuple
 
 from sqlalchemy.orm import Session
 from app.DB_models.camera_info_db import CameraInfoDB
@@ -6,18 +7,27 @@ from app.DB_models.park_area_db import ParkAreaDB
 from app.JSON_schemas.camera_info_pydantic import CameraInfoCreate, CameraInfoUpdate
 
 
-def get_camera_info(db: Session, camera_info_id: int) -> Optional[CameraInfoDB]:
+def get_camera_info(db: Session, camera_info_id: int) -> Optional[Tuple[CameraInfoDB, str]]:
     """
-    根据ID获取摄像头信息
+    根据ID获取摄像头信息，包含园区区域名称
 
     Args:
         db: 数据库会话
         camera_info_id: 摄像头信息ID
 
     Returns:
-        Optional[CameraInfoDB]: 摄像头信息或None
+        Optional[Tuple[CameraInfoDB, str]]: 摄像头信息和园区区域名称的元组，或None
     """
-    return db.query(CameraInfoDB).filter(CameraInfoDB.camera_id == camera_info_id).first()
+    result = db.query(
+        CameraInfoDB,
+        ParkAreaDB.park_area
+    ).outerjoin(
+        ParkAreaDB, CameraInfoDB.park_area_id == ParkAreaDB.park_area_id
+    ).filter(
+        CameraInfoDB.camera_id == camera_info_id
+    ).first()
+    
+    return result
 
 
 def get_camera_infos_with_condition(
@@ -27,9 +37,9 @@ def get_camera_infos_with_condition(
         camera_status: Optional[int] = None,
         skip: int = 0,
         limit: int = 10
-) -> List[CameraInfoDB]:
+):
     """
-    根据条件获取摄像头信息列表（支持分页）
+    根据条件获取摄像头信息列表（支持分页），包含园区区域信息
 
     Args:
         db: 数据库会话
@@ -40,9 +50,15 @@ def get_camera_infos_with_condition(
         limit: 限制返回的记录数
 
     Returns:
-        List[CameraInfoDB]: 摄像头信息列表
+        tuple: (总数, 摄像头信息列表)
     """
-    query = db.query(CameraInfoDB)
+    # 构建联表查询
+    query = db.query(
+        CameraInfoDB,
+        ParkAreaDB.park_area
+    ).outerjoin(
+        ParkAreaDB, CameraInfoDB.park_area_id == ParkAreaDB.park_area_id
+    )
 
     # 添加园区区域ID条件
     if park_area_id is not None:
@@ -56,7 +72,10 @@ def get_camera_infos_with_condition(
     if camera_status is not None:
         query = query.filter(CameraInfoDB.camera_status == camera_status)
 
-    return query.offset(skip).limit(limit).all()
+    # 返回计数和分页结果
+    count = query.count()
+    cameras_with_details = query.offset(skip).limit(limit).all()
+    return count, cameras_with_details
 
 
 def get_all_camera_infos(db: Session, skip: int = 0, limit: int = 100) -> List[CameraInfoDB]:
@@ -75,33 +94,57 @@ def get_all_camera_infos(db: Session, skip: int = 0, limit: int = 100) -> List[C
 
 
 # 3. 增：创建新摄像头信息
-def create_camera_info(db: Session, camera_info: CameraInfoCreate) -> CameraInfoDB:
+def create_camera_info(db: Session, camera_info: CameraInfoCreate) -> Tuple[CameraInfoDB, str]:
     # 1. 将 Pydantic 模型（CameraInfoCreate）转成 SQLAlchemy 模型（CameraInfoDB）
-    db_camera_info = CameraInfoDB(** camera_info.model_dump())
+    db_camera_info = CameraInfoDB(**camera_info.model_dump())
     # 2. 提交到数据库
     db.add(db_camera_info)
     db.commit()
     db.refresh(db_camera_info)  # 刷新实例，获取数据库自动生成的 id 等字段
-    return db_camera_info
+    
+    # 3. 查询关联的园区区域名称
+    park_area = db.query(ParkAreaDB.park_area).filter(
+        ParkAreaDB.park_area_id == db_camera_info.park_area_id
+    ).first()
+    
+    park_area_name = park_area.park_area if park_area else "未知区域"
+    
+    return db_camera_info, park_area_name
 
 # 4. 改：根据 ID 修改摄像头信息
 def update_camera_info(
     db: Session,
     camera_info_id: int,
     camera_info_update: CameraInfoUpdate
-) -> Optional[CameraInfoDB]:
+) -> Optional[Tuple[CameraInfoDB, str]]:
     # 先查询摄像头信息是否存在
-    db_camera_info = get_camera_info(db, camera_info_id)
+    db_camera_info = db.query(CameraInfoDB).filter(
+        CameraInfoDB.camera_id == camera_info_id
+    ).first()
+    
     if not db_camera_info:
         return None  # 摄像头信息不存在，返回 None
+        
     # 将更新的字段赋值给数据库实例（只更新非 None 的字段）
     update_data = camera_info_update.model_dump(exclude_unset=True)  # 排除未传的字段
     for key, value in update_data.items():
         setattr(db_camera_info, key, value)
+        
+    # 更新时间字段
+    db_camera_info.update_time = datetime.now()
+    
     # 提交修改
     db.commit()
     db.refresh(db_camera_info)
-    return db_camera_info
+    
+    # 查询关联的园区区域名称
+    park_area = db.query(ParkAreaDB.park_area).filter(
+        ParkAreaDB.park_area_id == db_camera_info.park_area_id
+    ).first()
+    
+    park_area_name = park_area.park_area if park_area else "未知区域"
+    
+    return db_camera_info, park_area_name
 
 # 5. 批量删：根据 ID 列表批量删除摄像头信息
 def delete_camera_infos(db: Session, camera_info_ids: List[int]) -> int:

@@ -40,7 +40,7 @@ class AlarmService:
         """
         try:
             # 使用线程池执行数据库操作
-            alarms_with_details = await asyncio.get_event_loop().run_in_executor(
+            total, alarms_with_details = await asyncio.get_event_loop().run_in_executor(
                 db_executor, 
                 crud_get_alarms_with_condition,
                 db, start_time, end_time, alarm_type, alarm_status, skip, limit
@@ -65,8 +65,6 @@ class AlarmService:
                     handle_user_name=alarm_row.handle_user_name
                 )
                 alarms.append(alarm_response)
-            
-            total = len(alarms)
 
             return Result.SUCCESS(AlarmPageResponse(total=total, rows=alarms))
         except Exception as e:

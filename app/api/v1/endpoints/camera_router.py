@@ -59,28 +59,7 @@ async def read_camera_info(
     result = await CameraInfoService.get_camera_info(db, camera_info_id)
     return result
 
-# 3. GET /api/v1/camera_infos：获取所有摄像头信息（支持分页）
-@router.get("/", response_model=Result[List[CameraInfoResponse]], summary="获取所有摄像头信息（支持分页）", status_code=status.HTTP_200_OK)
-async def read_all_camera_infos(
-    skip: Annotated[int, Query(description="跳过的记录数")] = 0,
-    limit: Annotated[int, Query(description="限制返回的记录数")] = 10,
-    db: Session = Depends(get_db)
-):
-    """
-    获取所有摄像头信息（支持分页）
-
-    Args:
-        skip (int): 跳过的记录数
-        limit (int): 限制返回的记录数
-        db (Session): 数据库会话
-
-    Returns:
-        Result[List[CameraInfoResponse]]: 包含摄像头信息列表的统一响应结果
-    """
-    result = await CameraInfoService.get_all_camera_infos(db, skip=skip, limit=limit)
-    return result
-
-# 4. POST /api/v1/camera_infos：创建新摄像头信息
+# 3. POST /api/v1/camera_infos：创建新摄像头信息
 @router.post("/", response_model=Result[CameraInfoResponse], summary="创建新摄像头信息", status_code=status.HTTP_201_CREATED)
 async def create_new_camera_info(
     camera_info: CameraInfoCreate,
@@ -99,7 +78,7 @@ async def create_new_camera_info(
     result = await CameraInfoService.create_camera_info(db, camera_info)
     return result
 
-# 5. PUT /api/v1/camera_infos/{camera_info_id}：更新摄像头信息
+# 4. PUT /api/v1/camera_infos/{camera_info_id}：更新摄像头信息
 @router.put("/{camera_info_id}", response_model=Result[CameraInfoResponse], summary="更新摄像头信息", status_code=status.HTTP_200_OK)
 async def update_camera_info(
     camera_info_id: Annotated[int, Path(title="摄像头信息ID", description="摄像头信息唯一标识")],
@@ -120,7 +99,7 @@ async def update_camera_info(
     result = await CameraInfoService.update_camera_info(db, camera_info_id, camera_info_update)
     return result
 
-# 6. DELETE /api/v1/camera_infos/{camera_info_ids}：删除摄像头信息（支持单个或批量删除）
+# 5. DELETE /api/v1/camera_infos/{camera_info_ids}：删除摄像头信息（支持单个或批量删除）
 @router.delete("/{camera_info_ids}", response_model=Result, status_code=status.HTTP_200_OK, summary="删除摄像头信息（支持单个或批量删除）")
 async def remove_camera_info(
     camera_info_ids: Annotated[str, Path(min_length=1, title="摄像头信息ID列表", description="摄像头信息ID列表，多个ID之间用英文逗号分隔")],
@@ -139,7 +118,7 @@ async def remove_camera_info(
     result = await CameraInfoService.delete_camera_infos(db, camera_info_ids)
     return result
 
-# 7. GET /api/v1/camera_infos/test/{camera_id} :测试摄像头能否连接
+# 6. GET /api/v1/camera_infos/test/{camera_id} :测试摄像头能否连接
 @router.get("/test/{camera_id}", response_model=Result, summary="测试摄像头连接状态", status_code=status.HTTP_200_OK)
 async def test_camera_connection_status(
     camera_id: Annotated[int, Path(title="摄像头ID", description="摄像头唯一标识")],

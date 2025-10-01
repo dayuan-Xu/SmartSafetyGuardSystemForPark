@@ -39,7 +39,7 @@ def get_park_areas_with_condition(
         park_area: Optional[str] = None,
         skip: int = 0,
         limit: int = 10
-) -> List[ParkAreaDB]:
+):
     """
     根据条件获取园区区域信息列表（支持分页）
 
@@ -58,22 +58,7 @@ def get_park_areas_with_condition(
     if park_area:
         query = query.filter(ParkAreaDB.park_area.like(f"%{park_area}%"))
 
-    return query.offset(skip).limit(limit).all()
-
-
-def get_all_park_areas(db: Session, skip: int = 0, limit: int = 100) -> List[ParkAreaDB]:
-    """
-    获取所有园区区域信息（支持分页）
-
-    Args:
-        db: 数据库会话
-        skip: 跳过的记录数
-        limit: 限制返回的记录数
-
-    Returns:
-        List[ParkAreaDB]: 园区区域信息列表
-    """
-    return db.query(ParkAreaDB).offset(skip).limit(limit).all()
+    return query.count(), query.offset(skip).limit(limit).all()
 
 
 def create_park_area(db: Session, park_area: ParkAreaCreate) -> ParkAreaDB:

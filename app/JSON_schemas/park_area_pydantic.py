@@ -29,7 +29,7 @@ class ParkAreaPageResponse(BaseModel):
         # API 文档示例数据
         json_schema_extra = {
             "example": {
-                "total": 2,
+                "total": 20,
                 "rows": [
                     {
                         "park_area_id": 1,

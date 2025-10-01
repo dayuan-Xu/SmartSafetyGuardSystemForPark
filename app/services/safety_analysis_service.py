@@ -216,14 +216,14 @@ class SafetyAnalysisService:
         try:
             camera_id = int(camera_id)
             # 从数据库中读取摄像头信息
-            camera_info= get_camera_info(db, camera_id)
-            if not camera_info:
-                return Result.ERROR(f"未找到 {camera_info.camera_name} 的信息，无法开启实时分析")
+            camera_info_result = get_camera_info(db, camera_id)
+            if not camera_info_result:
+                return Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
+            
+            # 从联表查询结果中提取摄像头信息
+            camera_info = camera_info_result.CameraInfoDB
 
-            # rtsp_url= camera_info.rtsp_url
-
-            # 分析模式: 0-无，1-全部，2-安全规范， 3-区域入侵， 4-火警
-            analysis_mode = camera_info.analysis_mode
+            analysis_mode = camera_info.analysis_mode or 2
 
             # 测试时，服务器本地视频充当实时视频流
             project_root = Path(__file__).parent.parent.parent
@@ -273,9 +273,12 @@ class SafetyAnalysisService:
     def stop_safety_analysis(cls, camera_id: str, db: Session) -> Result:
         try:
             camera_id = int(camera_id)
-            camera_info = get_camera_info(db, camera_id)
-            if not camera_info:
+            camera_info_result = get_camera_info(db, camera_id)
+            if not camera_info_result:
                 return Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
+            
+            # 从联表查询结果中提取摄像头信息
+            camera_info = camera_info_result.CameraInfoDB
 
             analysis_mode = camera_info.analysis_mode or 2
 

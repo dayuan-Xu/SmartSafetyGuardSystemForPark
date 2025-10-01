@@ -131,10 +131,13 @@ class VideoCaptureService:
             Result[bool]: 测试结果
         """
         try:
-            camera_info = get_camera_info(db, camera_id)
+            camera_info_result = get_camera_info(db, camera_id)
 
-            if not camera_info:
+            if not camera_info_result:
                 return Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
+            
+            # 从联表查询结果中提取摄像头信息
+            camera_info = camera_info_result.CameraInfoDB
 
             # 尝试连接视频流
             cap = cv2.VideoCapture(camera_info.rtsp_url)
