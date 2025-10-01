@@ -2,8 +2,12 @@ from datetime import datetime
 from typing import Optional, List
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.DB_models.alarm_db import AlarmDB
 from app.DB_models.alarm_handle_record_db import AlarmHandleRecordDB
+from app.DB_models.camera_info_db import CameraInfoDB
+from app.DB_models.user_db import UserDB
+from app.DB_models.park_area_db import ParkAreaDB
 
 
 def create_alarm(
@@ -55,9 +59,23 @@ def get_alarms_with_condition(
         limit: int = 10
 ):
     """
-    根据条件获取报警记录列表（支持分页）
+    根据条件获取报警记录列表（支持分页），包含摄像头信息和处理记录信息
     """
-    query = db.query(AlarmDB)
+    # 构建联表查询
+    query = db.query(
+        AlarmDB,
+        ParkAreaDB.park_area,
+        CameraInfoDB.camera_name,
+        UserDB.name.label('handle_user_name')
+    ).outerjoin(
+        CameraInfoDB, AlarmDB.camera_id == CameraInfoDB.camera_id
+    ).outerjoin(
+        ParkAreaDB, CameraInfoDB.park_area_id == ParkAreaDB.park_area_id
+    ).outerjoin(
+        AlarmHandleRecordDB, AlarmDB.alarm_id == AlarmHandleRecordDB.alarm_id
+    ).outerjoin(
+        UserDB, AlarmHandleRecordDB.handler_user_id == UserDB.user_id
+    )
 
     # 添加时间范围条件
     if start_time and end_time:
@@ -74,6 +92,22 @@ def get_alarms_with_condition(
     # 添加告警状态条件
     if alarm_status is not None:
         query = query.filter(AlarmDB.alarm_status == alarm_status)
+
+    # 分组以避免重复记录（一个告警可能有多条处理记录）
+    query = query.group_by(
+        AlarmDB.alarm_id,
+        AlarmDB.camera_id,
+        AlarmDB.alarm_type,
+        AlarmDB.alarm_status,
+        AlarmDB.alarm_time,
+        AlarmDB.alarm_end_time,
+        AlarmDB.snapshot_url,
+        AlarmDB.create_time,
+        AlarmDB.update_time,
+        ParkAreaDB.park_area,
+        CameraInfoDB.camera_name,
+        UserDB.name
+    )
 
     return query.offset(skip).limit(limit).all()
 

@@ -346,11 +346,12 @@ class SafetyAnalysisService:
                 def process_alarm_async():
                     try:
                         snapshot_urls="" # 包含本次告警的所有经过标注的帧的url
-                        for annotated_frame in annotated_frames:
+                        for i,annotated_frame in enumerate(annotated_frames):
                             # 保存截图到云OSS并获取URL
                             snapshot_url = StorageService.upload_alarm_snapshot(annotated_frame, camera_id)
                             snapshot_urls+=snapshot_url
-                            snapshot_urls+=','
+                            if i > 0:
+                                snapshot_urls+=','
                             logger.info(f"已经保存告警截图到云OSS，访问URL: {snapshot_url}")
 
                         # 创建告警记录

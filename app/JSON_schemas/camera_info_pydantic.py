@@ -6,7 +6,8 @@ from datetime import datetime
 class CameraInfoResponse(BaseModel):
     camera_id: int
     camera_name: str
-    park_area: str
+    park_area_id: int
+    park_area: str  # 联表查询的新增字段
     install_position: str
     rtsp_url: str
     analysis_mode: int
@@ -22,6 +23,7 @@ class CameraInfoResponse(BaseModel):
             "example": {
                 "camera_id": 1,
                 "camera_name": "东门摄像头",
+                "park_area_id": 1,
                 "park_area": "东区",
                 "install_position": "东门岗亭上方",
                 "rtsp_url": "rtsp://192.168.1.1:554/live.sdp",
@@ -45,6 +47,7 @@ class CameraInfoPageResponse(BaseModel):
                     {
                         "camera_id": 1,
                         "camera_name": "东门摄像头",
+                        "park_area_id": 1,
                         "park_area": "东区",
                         "install_position": "东门岗亭上方",
                         "rtsp_url": "rtsp://192.168.1.1:554/live.sdp",
@@ -56,6 +59,7 @@ class CameraInfoPageResponse(BaseModel):
                     {
                         "camera_id": 2,
                         "camera_name": "西门摄像头",
+                        "park_area_id": 2,
                         "park_area": "西区",
                         "install_position": "西门岗亭上方",
                         "rtsp_url": "rtsp://192.168.1.2:554/live.sdp",
@@ -71,7 +75,7 @@ class CameraInfoPageResponse(BaseModel):
 # ------------------- 请求模型（前端传数据的格式校验）-------------------
 class CameraInfoCreate(BaseModel):
     camera_name: str = Field(..., min_length=1, max_length=64, description="摄像头名称")
-    park_area: str = Field(..., min_length=1, max_length=64, description="摄像头所属园区区域")
+    park_area_id: int = Field(..., ge=1, description="园区区域ID")
     install_position: str = Field(..., min_length=1, max_length=64, description="摄像头具体安装位置")
     rtsp_url: str = Field(..., min_length=1, max_length=255, description="摄像头的RTSP地址")
     analysis_mode: int = Field(..., ge=0, le=4, description="分析模式: 0-无，1-全部，2-安全规范，3-区域入侵，4-火警")
@@ -79,7 +83,7 @@ class CameraInfoCreate(BaseModel):
 # 修改摄像头信息时的请求模型（允许部分字段修改，所以用 Optional）
 class CameraInfoUpdate(BaseModel):
     camera_name: Optional[str] = Field(None, min_length=1, max_length=64)
-    park_area: Optional[str] = Field(None, min_length=1, max_length=64)
+    park_area_id: Optional[int] = Field(None, ge=1)
     install_position: Optional[str] = Field(None, min_length=1, max_length=64)
     rtsp_url: Optional[str] = Field(None, min_length=1, max_length=255)
     analysis_mode: Optional[int] = Field(None, ge=0, le=4)

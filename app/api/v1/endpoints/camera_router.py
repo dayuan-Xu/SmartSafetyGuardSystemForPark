@@ -14,8 +14,8 @@ router = APIRouter()
 # 注意：这个路由必须放在 /{camera_info_id} 之前，避免路由冲突
 @router.get("/search", response_model=Result[CameraInfoPageResponse], summary="根据条件获取摄像头信息（支持分页）", status_code=status.HTTP_200_OK)
 async def search_camera_infos(
-        park_area: Annotated[Optional[str], Query(description="摄像头所处园区位置")] = None,
-        analysis_mode: Annotated[Optional[int], Query(description="分析模式: 0-无，1-全部，2-安全规范，3-区域入侵，4-火警")] = None,
+        park_area_id: Annotated[Optional[int], Query(description="园区区域ID")] = None,
+        analysis_mode: Annotated[Optional[int], Query(description="分析模式: 0-无，1-全部(安全规范+区域入侵+火警)，2-安全规范，3-区域入侵，4-火警")] = None,
         camera_status: Annotated[Optional[int], Query(description="摄像头状态: 0-离线，1-在线")] = None,
         skip: Annotated[int, Query(description="跳过的记录数")] = 0,
         limit: Annotated[int, Query(description="限制返回的记录数")] = 10,
@@ -25,8 +25,8 @@ async def search_camera_infos(
     根据条件获取摄像头信息（支持分页）
 
     Args:
-        park_area (Optional[str]): 摄像头所处园区位置
-        analysis_mode (Optional[int]): 摄像头分析模式
+        park_area_id (Optional[int]): 园区区域ID
+        analysis_mode (Optional[int]): 分析模式
         camera_status (Optional[int]): 摄像头状态
         skip (int): 跳过的记录数
         limit (int): 限制返回的记录数
@@ -36,7 +36,7 @@ async def search_camera_infos(
         Result[CameraInfoPageResponse]: 包含摄像头信息分页结果的统一响应
     """
     result = await CameraInfoService.get_camera_infos_with_condition(
-        db, park_area, analysis_mode, camera_status, skip, limit
+        db, park_area_id, analysis_mode, camera_status, skip, limit
     )
     return result
 
@@ -81,7 +81,7 @@ async def read_all_camera_infos(
     return result
 
 # 4. POST /api/v1/camera_infos：创建新摄像头信息
-@router.post("/", response_model=Result[CameraInfoResponse], status_code=status.HTTP_201_CREATED, summary="创建新摄像头信息")
+@router.post("/", response_model=Result[CameraInfoResponse], summary="创建新摄像头信息", status_code=status.HTTP_201_CREATED)
 async def create_new_camera_info(
     camera_info: CameraInfoCreate,
     db: Session = Depends(get_db)
@@ -94,20 +94,20 @@ async def create_new_camera_info(
         db (Session): 数据库会话
 
     Returns:
-        Result[CameraInfoResponse]: 包含新创建的摄像头信息的统一响应结果
+        Result[CameraInfoResponse]: 包含创建的摄像头信息的统一响应结果
     """
     result = await CameraInfoService.create_camera_info(db, camera_info)
     return result
 
-# 5. PUT /api/v1/camera_infos/{camera_info_id}：修改摄像头信息
-@router.put("/{camera_info_id}", response_model=Result[CameraInfoResponse], summary="修改摄像头信息", status_code=status.HTTP_200_OK)
-async def update_existing_camera_info(
+# 5. PUT /api/v1/camera_infos/{camera_info_id}：更新摄像头信息
+@router.put("/{camera_info_id}", response_model=Result[CameraInfoResponse], summary="更新摄像头信息", status_code=status.HTTP_200_OK)
+async def update_camera_info(
     camera_info_id: Annotated[int, Path(title="摄像头信息ID", description="摄像头信息唯一标识")],
     camera_info_update: CameraInfoUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
     """
-    修改摄像头信息
+    更新摄像头信息
 
     Args:
         camera_info_id (int): 摄像头信息唯一标识
@@ -140,16 +140,16 @@ async def remove_camera_info(
     return result
 
 # 7. GET /api/v1/camera_infos/test/{camera_id} :测试摄像头能否连接
-@router.get("/test/{camera_id}", response_model=Result, summary="测试摄像头能否连接", status_code=status.HTTP_200_OK)
-async def test_camera_connection(
-    camera_id: Annotated[str, Path(title="摄像头ID", description="摄像头唯一标识")], 
+@router.get("/test/{camera_id}", response_model=Result, summary="测试摄像头连接状态", status_code=status.HTTP_200_OK)
+async def test_camera_connection_status(
+    camera_id: Annotated[int, Path(title="摄像头ID", description="摄像头唯一标识")],
     db: Session = Depends(get_db)
-):  # 注意这里camera_id是字符串
+):
     """
-    测试摄像头能否连接
+    测试摄像头连接状态
 
     Args:
-        camera_id (str): 摄像头唯一标识
+        camera_id (int): 摄像头唯一标识
         db (Session): 数据库会话
 
     Returns:

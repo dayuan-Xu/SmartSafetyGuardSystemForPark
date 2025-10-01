@@ -4,7 +4,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 from app.JSON_schemas.Result_pydantic import Result
-from app.JSON_schemas.alarm_pydantic import AlarmPageResponse
+from app.JSON_schemas.alarm_pydantic import AlarmPageResponse, AlarmResponse
 from app.crud.alarm_crud import (
     get_alarms_with_condition as crud_get_alarms_with_condition,
     delete_alarms_and_related_records as crud_delete_alarms_and_related_records
@@ -40,11 +40,32 @@ class AlarmService:
         """
         try:
             # 使用线程池执行数据库操作
-            alarms = await asyncio.get_event_loop().run_in_executor(
+            alarms_with_details = await asyncio.get_event_loop().run_in_executor(
                 db_executor, 
                 crud_get_alarms_with_condition,
                 db, start_time, end_time, alarm_type, alarm_status, skip, limit
             )
+            
+            # 转换查询结果为AlarmResponse对象
+            alarms = []
+            for alarm_row in alarms_with_details:
+                # 处理 SQLAlchemy 查询结果对象
+                alarm_response = AlarmResponse(
+                    alarm_id=alarm_row.AlarmDB.alarm_id,
+                    camera_id=alarm_row.AlarmDB.camera_id,
+                    alarm_type=alarm_row.AlarmDB.alarm_type,
+                    alarm_status=alarm_row.AlarmDB.alarm_status,
+                    alarm_time=alarm_row.AlarmDB.alarm_time,
+                    alarm_end_time=alarm_row.AlarmDB.alarm_end_time,
+                    snapshot_url=alarm_row.AlarmDB.snapshot_url,
+                    create_time=alarm_row.AlarmDB.create_time,
+                    update_time=alarm_row.AlarmDB.update_time,
+                    park_area=alarm_row.park_area,
+                    camera_name=alarm_row.camera_name,
+                    handle_user_name=alarm_row.handle_user_name
+                )
+                alarms.append(alarm_response)
+            
             total = len(alarms)
 
             return Result.SUCCESS(AlarmPageResponse(total=total, rows=alarms))

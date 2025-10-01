@@ -9,7 +9,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.JSON_schemas.Result_pydantic import Result
-from app.api.v1.endpoints import alarm_handle_record_router  # 导入报警记录接口路由
+from app.api.v1.endpoints import park_area_router # 导入园区区域接口路由
+from app.api.v1.endpoints import alarm_handle_record_router # 导入报警记录接口路由
 from app.api.v1.endpoints import alarm_router  # 导入告警记录接口路由
 from app.api.v1.endpoints import camera_router  # 导入商品接口路由
 from app.api.v1.endpoints import safety_analysis_router  # 导入安全分析路由
@@ -70,39 +71,6 @@ app.add_middleware(
 #             content=result.model_dump()
 #         )
 #
-#     token = auth_header.split(" ")[1]
-#
-#     # 验证token
-#     try:
-#         user_info = verify_token(token)
-#         # 将用户信息存储在请求状态中，供后续使用
-#         request.state.user = user_info
-#     except Exception:
-#         # 返回统一的错误响应格式
-#         result = Result.ERROR(msg="Invalid token")
-#         return JSONResponse(
-#             status_code=401,
-#             content=result.model_dump()
-#         )
-#
-#     # 继续处理请求
-#     response = await call_next(request)
-#     return response
-
-# # 日志记录中间件
-# @app.middleware("http")
-# async def log_requests(request: Request, call_next):
-#     # 前置处理 - 请求到达时记录
-#     start_time = time.time()
-#     logger.info(f"收到请求: {request.method} {request.url}")
-#
-#     # 继续处理请求
-#     response = await call_next(request)
-#
-#     # 后置处理 - 响应返回前记录
-#     process_time = time.time() - start_time
-#     logger.info(f"响应状态: {response.status_code} - 处理时间: {process_time:.4f}秒")
-#
 #     return response
 
 # 注册路由（给接口加统一前缀 /api/v1，方便版本管理）
@@ -113,9 +81,10 @@ app.add_middleware(
 app.include_router(sign_in_or_up_router.router, prefix="/api/v1", tags=["注册登录"])
 app.include_router(safety_analysis_router.router, prefix="/api/v1/safety_analysis", tags=["安防分析控制"])
 app.include_router(alarm_handle_record_router.router,prefix="/api/v1/alarm_handle_records",tags=["告警处理记录"])
-app.include_router(alarm_router.router,prefix="/api/v1/alarms",tags=["告警记录"])
+app.include_router(alarm_router.router,prefix="/api/v1/alarms",tags=["告警管理"])
 app.include_router(user_router.router, prefix="/api/v1/users", tags=["用户管理"])
-app.include_router(camera_router.router, prefix="/api/v1/cameraInfos", tags=["摄像头管理"])
+app.include_router(camera_router.router, prefix="/api/v1/camera_infos", tags=["摄像头管理"])
+app.include_router(park_area_router.router, prefix="/api/v1/park_areas", tags=["园区区域管理"])
 
 # 根路径
 @app.get("/")

@@ -2,20 +2,19 @@ from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional, List
 
-
-class AlarmBase(BaseModel):
+class AlarmResponse(BaseModel):
+    alarm_id: int
     camera_id: int
     alarm_type: int
     alarm_status: int
     alarm_time: datetime
     alarm_end_time: Optional[datetime] = None
     snapshot_url: str
-
-
-class AlarmResponse(AlarmBase):
-    alarm_id: int
     create_time: datetime
     update_time: datetime
+    park_area: str
+    camera_name: str
+    handle_user_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -30,7 +29,10 @@ class AlarmResponse(AlarmBase):
                 "alarm_end_time": "2023-01-01T10:05:00",
                 "snapshot_url": "https://oss.example.com/snapshot.jpg",
                 "create_time": "2023-01-01T10:00:00",
-                "update_time": "2023-01-01T10:05:00"
+                "update_time": "2023-01-01T10:05:00",
+                "park_area": "东区",
+                "camera_name": "东门摄像头",
+                "handle_user_name": "张三"
             }
         }
 
@@ -53,7 +55,10 @@ class AlarmPageResponse(BaseModel):
                         "alarm_end_time": "2023-01-01T10:05:00",
                         "snapshot_url": "https://oss.example.com/snapshot1.jpg",
                         "create_time": "2023-01-01T10:00:00",
-                        "update_time": "2023-01-01T10:05:00"
+                        "update_time": "2023-01-01T10:05:00",
+                        "park_area": "东区",
+                        "camera_name": "东门摄像头",
+                        "handle_user_name": "张三"
                     },
                     {
                         "alarm_id": 2,
@@ -64,7 +69,10 @@ class AlarmPageResponse(BaseModel):
                         "alarm_end_time": None,
                         "snapshot_url": "https://oss.example.com/snapshot2.jpg",
                         "create_time": "2023-01-01T11:00:00",
-                        "update_time": "2023-01-01T11:00:00"
+                        "update_time": "2023-01-01T11:00:00",
+                        "park_area": "西区",
+                        "camera_name": "西门摄像头",
+                        "handle_user_name": None
                     }
                 ]
             }

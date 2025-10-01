@@ -12,7 +12,7 @@ class AlarmDB(Base):
 
     alarm_id = Column(BigInteger, primary_key=True, autoincrement=True, index=True) # 报警ID，唯一自增，建索引
     camera_id = Column(Integer, nullable=False, index=True)# 摄像头ID，逻辑外键，建索引
-    alarm_type = Column(TINYINT(), nullable=False)  # 0-安全规范（未戴安全帽/未穿反光衣） 2-区域入侵（人/车） 3-火警（火焰/烟雾）
+    alarm_type = Column(TINYINT(), nullable=False)  # 0-安全规范（未戴安全帽/未穿反光衣） 1-区域入侵（人/车） 2-火警（火焰/烟雾）
     alarm_status = Column(TINYINT(), default=0)  # 0-未处理 1-确认误报 2-处理中（已派单） 3-处理完成
     alarm_time = Column(DateTime, nullable=False) # 告警触发时间，非空
     alarm_end_time = Column(DateTime, nullable=True) # 告警触发时间，可为空
