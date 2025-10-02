@@ -1,4 +1,5 @@
 import asyncio
+from typing import List
 from sqlalchemy.orm import Session
 from app.JSON_schemas.Result_pydantic import Result
 from app.JSON_schemas.alarm_handle_record_pydantic import (
@@ -6,7 +7,7 @@ from app.JSON_schemas.alarm_handle_record_pydantic import (
     AlarmHandleRecordCreate
 )
 from app.crud.alarm_handle_record_crud import (
-    get_alarm_handle_record as crud_get_alarm_handle_record,
+    get_alarm_handle_records as crud_get_alarm_handle_records,
     create_alarm_handle_record as crud_create_alarm_handle_record
 )
 from app.crud.alarm_crud import update_alarm_status
@@ -16,24 +17,24 @@ from app.services.thread_pool_manager import executor as db_executor
 
 class AlarmHandleRecordService:
     @staticmethod
-    async def get_handle_records_by_alarm_id(db: Session, alarm_id: int) -> Result[AlarmHandleRecordResponse]:
+    async def get_handle_records_by_alarm_id(db: Session, alarm_id: int) -> Result[List[AlarmHandleRecordResponse]]:
         """
-        根据告警ID获取单个对应所有告警处理记录
+        根据告警ID获取该告警的所有处理记录
 
         Args:
             db: 数据库会话
-            alarm_id: 处理记录ID
+            alarm_id: 告警ID
 
         Returns:
-            Result[AlarmHandleRecordResponse]: 包含告警处理记录信息的响应对象
+            Result[List[AlarmHandleRecordResponse]]: 包含告警处理记录列表的响应对象
         """
         # 使用线程池执行数据库操作
-        db_handle_record = await asyncio.get_event_loop().run_in_executor(
-            db_executor, crud_get_alarm_handle_record, db, alarm_id
+        db_handle_records = await asyncio.get_event_loop().run_in_executor(
+            db_executor, crud_get_alarm_handle_records, db, alarm_id
         )
-        if not db_handle_record:
-            return Result.ERROR(f"AlarmHandleRecord not found with given alarm id={alarm_id}")
-        return Result.SUCCESS(db_handle_record)
+        if not db_handle_records:
+            return Result.ERROR(f"No alarm handle records found for alarm id={alarm_id}")
+        return Result.SUCCESS(db_handle_records)
 
     @classmethod
     async def create_handle_record(cls, db: Session, record_create: AlarmHandleRecordCreate) -> Result[AlarmHandleRecordResponse]:

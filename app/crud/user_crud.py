@@ -16,14 +16,37 @@ UserDB 模型的含义:
         每个实例都有具体的属性值
 """
 
-# 1. 查：根据 ID 获取单个用户信息
 def get_user(db: Session, user_id: int) -> Optional[UserDB]:
+    """
+    根据 ID 获取单个用户信息
+
+    Args:
+        db (Session): 数据库会话
+        user_id (int): 用户ID
+
+    Returns:
+        Optional[UserDB]: 用户信息对象或None
+    """
     return db.query(UserDB).filter(UserDB.user_id == user_id).first()
 
-# 2. 查：获取所有用户信息（支持分页，默认取 10 条）
 def get_all_users(db: Session, skip: int = 0, limit: int = 10, 
                  name: str = None, gender: int = None,
                  start_time: str = None, end_time: str = None) -> List[UserDB]:
+    """
+    获取所有用户信息（支持分页和筛选）
+
+    Args:
+        db (Session): 数据库会话
+        skip (int): 跳过的记录数，默认为0
+        limit (int): 限制返回的记录数，默认为10
+        name (str): 用户姓名（模糊查询）
+        gender (int): 用户性别
+        start_time (str): 入职时间起始时间
+        end_time (str): 入职时间结束时间
+
+    Returns:
+        List[UserDB]: 用户信息列表
+    """
     query = db.query(UserDB)
     
     # 根据姓名筛选
@@ -43,8 +66,17 @@ def get_all_users(db: Session, skip: int = 0, limit: int = 10,
     
     return query.offset(skip).limit(limit).all()
 
-# 3. 增：创建新用户
 def create_user(db: Session, user: UserCreate) -> UserDB:
+    """
+    创建新用户
+
+    Args:
+        db (Session): 数据库会话
+        user (UserCreate): 用户创建信息
+
+    Returns:
+        UserDB: 新创建的用户对象
+    """
     # 1. 将 Pydantic 模型（UserCreate）转成 SQLAlchemy 模型（UserDB）
     if user.password:
         user.password = get_password_hash(user.password)
@@ -55,12 +87,22 @@ def create_user(db: Session, user: UserCreate) -> UserDB:
     db.refresh(db_user)  # 刷新实例，获取数据库自动生成的 id 等字段
     return db_user
 
-# 4. 改：根据 ID 修改用户信息
 def update_user(
     db: Session,
     user_id: int,
     user_update: UserUpdate
 ) -> Optional[UserDB]:
+    """
+    根据 ID 修改用户信息
+
+    Args:
+        db (Session): 数据库会话
+        user_id (int): 用户ID
+        user_update (UserUpdate): 用户更新信息
+
+    Returns:
+        Optional[UserDB]: 更新后的用户信息对象或None（如果未找到）
+    """
     # 先查询用户信息是否存在
     db_user = get_user(db, user_id)
     if not db_user:
@@ -77,14 +119,13 @@ def update_user(
     db.refresh(db_user)
     return db_user
 
-# 5. 批量删：根据 ID 列表批量删除用户信息
 def delete_users(db: Session, user_ids: List[int]) -> int:
     """
     批量删除用户信息
 
     Args:
-        db: 数据库会话
-        user_ids: 用户信息ID列表
+        db (Session): 数据库会话
+        user_ids (List[int]): 用户信息ID列表
 
     Returns:
         int: 成功删除的记录数
@@ -107,15 +148,15 @@ def delete_users(db: Session, user_ids: List[int]) -> int:
     return deleted_count
 
 
-def get_user_by_username(db, username):
+def get_user_by_username(db: Session, username: str) -> Optional[UserDB]:
     """
     根据用户名查询用户信息
 
     Args:
-        db: 数据库会话
-        username: 用户名
+        db (Session): 数据库会话
+        username (str): 用户名
 
     Returns:
-        UserDB: 用户信息对象
+        Optional[UserDB]: 用户信息对象或None
     """
     return db.query(UserDB).filter(UserDB.user_name == username).first()

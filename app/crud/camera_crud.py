@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional, List, Tuple
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.DB_models.camera_info_db import CameraInfoDB
 from app.DB_models.park_area_db import ParkAreaDB
 from app.JSON_schemas.camera_info_pydantic import CameraInfoCreate, CameraInfoUpdate
@@ -12,8 +13,8 @@ def get_camera_info(db: Session, camera_info_id: int) -> Optional[Tuple[CameraIn
     根据ID获取摄像头信息，包含园区区域名称
 
     Args:
-        db: 数据库会话
-        camera_info_id: 摄像头信息ID
+        db (Session): 数据库会话
+        camera_info_id (int): 摄像头信息ID
 
     Returns:
         Optional[Tuple[CameraInfoDB, str]]: 摄像头信息和园区区域名称的元组，或None
@@ -42,12 +43,12 @@ def get_camera_infos_with_condition(
     根据条件获取摄像头信息列表（支持分页），包含园区区域信息
 
     Args:
-        db: 数据库会话
-        park_area_id: 园区区域ID
-        analysis_mode: 分析模式
-        camera_status: 摄像头状态
-        skip: 跳过的记录数
-        limit: 限制返回的记录数
+        db (Session): 数据库会话
+        park_area_id (Optional[int]): 园区区域ID
+        analysis_mode (Optional[int]): 分析模式
+        camera_status (Optional[int]): 摄像头状态
+        skip (int): 跳过的记录数，默认为0
+        limit (int): 限制返回的记录数，默认为10
 
     Returns:
         tuple: (总数, 摄像头信息列表)
@@ -83,9 +84,9 @@ def get_all_camera_infos(db: Session, skip: int = 0, limit: int = 100) -> List[C
     获取所有摄像头信息（支持分页）
 
     Args:
-        db: 数据库会话
-        skip: 跳过的记录数
-        limit: 限制返回的记录数
+        db (Session): 数据库会话
+        skip (int): 跳过的记录数，默认为0
+        limit (int): 限制返回的记录数，默认为100
 
     Returns:
         List[CameraInfoDB]: 摄像头信息列表
@@ -93,8 +94,17 @@ def get_all_camera_infos(db: Session, skip: int = 0, limit: int = 100) -> List[C
     return db.query(CameraInfoDB).offset(skip).limit(limit).all()
 
 
-# 3. 增：创建新摄像头信息
 def create_camera_info(db: Session, camera_info: CameraInfoCreate) -> Tuple[CameraInfoDB, str]:
+    """
+    创建新的摄像头信息
+
+    Args:
+        db (Session): 数据库会话
+        camera_info (CameraInfoCreate): 摄像头信息创建数据
+
+    Returns:
+        Tuple[CameraInfoDB, str]: 新创建的摄像头信息对象和园区区域名称
+    """
     # 1. 将 Pydantic 模型（CameraInfoCreate）转成 SQLAlchemy 模型（CameraInfoDB）
     db_camera_info = CameraInfoDB(**camera_info.model_dump())
     # 2. 提交到数据库
@@ -111,12 +121,22 @@ def create_camera_info(db: Session, camera_info: CameraInfoCreate) -> Tuple[Came
     
     return db_camera_info, park_area_name
 
-# 4. 改：根据 ID 修改摄像头信息
 def update_camera_info(
     db: Session,
     camera_info_id: int,
     camera_info_update: CameraInfoUpdate
 ) -> Optional[Tuple[CameraInfoDB, str]]:
+    """
+    根据 ID 修改摄像头信息
+
+    Args:
+        db (Session): 数据库会话
+        camera_info_id (int): 摄像头信息ID
+        camera_info_update (CameraInfoUpdate): 摄像头信息更新数据
+
+    Returns:
+        Optional[Tuple[CameraInfoDB, str]]: 更新后的摄像头信息对象和园区区域名称，或None（如果未找到）
+    """
     # 先查询摄像头信息是否存在
     db_camera_info = db.query(CameraInfoDB).filter(
         CameraInfoDB.camera_id == camera_info_id
@@ -146,14 +166,13 @@ def update_camera_info(
     
     return db_camera_info, park_area_name
 
-# 5. 批量删：根据 ID 列表批量删除摄像头信息
 def delete_camera_infos(db: Session, camera_info_ids: List[int]) -> int:
     """
     批量删除摄像头信息
 
     Args:
-        db: 数据库会话
-        camera_info_ids: 摄像头信息ID列表
+        db (Session): 数据库会话
+        camera_info_ids (List[int]): 摄像头信息ID列表
 
     Returns:
         int: 成功删除的记录数
@@ -174,3 +193,24 @@ def delete_camera_infos(db: Session, camera_info_ids: List[int]) -> int:
     db.commit()
 
     return deleted_count
+
+
+def get_camera_status_stats(db: Session):
+    """
+    获取摄像头状态统计信息
+    
+    Args:
+        db (Session): 数据库会话
+        
+    Returns:
+        tuple: (在线摄像头数, 总摄像头数)
+    """
+    # 查询在线摄像头数（camera_status = 1 或 2）
+    online_count = db.query(func.count(CameraInfoDB.camera_id)).filter(
+        CameraInfoDB.camera_status.in_([1, 2])
+    ).scalar()
+    
+    # 查询总摄像头数
+    total_count = db.query(func.count(CameraInfoDB.camera_id)).scalar()
+    
+    return online_count, total_count

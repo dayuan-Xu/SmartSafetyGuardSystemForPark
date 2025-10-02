@@ -221,7 +221,7 @@ class SafetyAnalysisService:
                 return Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
             
             # 从联表查询结果中提取摄像头信息
-            camera_info = camera_info_result.CameraInfoDB
+            camera_info = camera_info_result[0]  # CameraInfoDB instance
 
             analysis_mode = camera_info.analysis_mode or 2
 
@@ -278,7 +278,7 @@ class SafetyAnalysisService:
                 return Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
             
             # 从联表查询结果中提取摄像头信息
-            camera_info = camera_info_result.CameraInfoDB
+            camera_info = camera_info_result[0]  # CameraInfoDB instance
 
             analysis_mode = camera_info.analysis_mode or 2
 

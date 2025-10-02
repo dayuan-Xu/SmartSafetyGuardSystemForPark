@@ -6,16 +6,16 @@ from app.JSON_schemas.alarm_handle_record_pydantic import AlarmHandleRecordCreat
 from app.JSON_schemas.alarm_handle_record_pydantic import AlarmHandleRecordCreate
 
 
-def get_alarm_handle_record(db: Session, alarm_id: int) -> Optional[AlarmHandleRecordDB]:
+def get_alarm_handle_records(db: Session, alarm_id: int) -> List[AlarmHandleRecordDB]:
     """
-    根据告警ID获取对应告警处理记录
+    根据告警ID获取该告警的所有处理记录
 
     Args:
-        db: 数据库会话
-        alarm_id: 处理记录ID
+        db (Session): 数据库会话
+        alarm_id (int): 告警ID
 
     Returns:
-        Optional[AlarmHandleRecordDB]: 告警处理记录对象或None
+        List[AlarmHandleRecordDB]: 告警处理记录对象列表
     """
     return db.query(AlarmHandleRecordDB).filter(AlarmHandleRecordDB.alarm_id == alarm_id).all()
 
@@ -24,8 +24,8 @@ def create_alarm_handle_record(db: Session, record_create: AlarmHandleRecordCrea
     创建新的告警处理记录
 
     Args:
-        db: 数据库会话
-        record_create: 告警处理记录创建数据
+        db (Session): 数据库会话
+        record_create (AlarmHandleRecordCreate): 告警处理记录创建数据
 
     Returns:
         AlarmHandleRecordDB: 新创建的告警处理记录对象

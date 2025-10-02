@@ -7,13 +7,14 @@ from sqlalchemy.orm import Session
 
 from app.JSON_schemas.Result_pydantic import Result
 from app.JSON_schemas.camera_info_pydantic import CameraInfoResponse, CameraInfoCreate, CameraInfoUpdate, \
-    CameraInfoPageResponse
+    CameraInfoPageResponse, CameraStatusReport
 from app.crud.camera_crud import (
     get_camera_info,
     get_camera_infos_with_condition as crud_get_camera_infos_with_condition,
     create_camera_info as crud_create_camera_info,
     update_camera_info as crud_update_camera_info,
-    delete_camera_infos as crud_delete_camera_infos
+    delete_camera_infos as crud_delete_camera_infos,
+    get_camera_status_stats as crud_get_camera_status_stats
 )
 from app.crud.park_area_crud import get_park_area as crud_get_park_area
 from app.services.thread_pool_manager import executor as db_executor
@@ -57,6 +58,36 @@ class CameraInfoService:
             update_time=camera_info.update_time
         )
         return Result.SUCCESS(camera_response)
+
+    @staticmethod
+    async def get_camera_status_report(db: Session) -> Result[CameraStatusReport]:
+        """
+        获取摄像头状态统计报告
+
+        Args:
+            db: 数据库会话
+
+        Returns:
+            Result[CameraStatusReport]: 包含摄像头状态统计数据的响应对象
+        """
+        try:
+            # 使用线程池执行数据库操作
+            online_count, total_count = await asyncio.get_event_loop().run_in_executor(
+                db_executor,
+                crud_get_camera_status_stats,
+                db
+            )
+
+            # 计算离线摄像头数
+            offline_count = total_count - online_count
+
+            return Result.SUCCESS(CameraStatusReport(
+                online_count=online_count,
+                total_count=total_count,
+                offline_count=offline_count
+            ))
+        except Exception as e:
+            return Result.ERROR(f"查询摄像头状态统计失败: {str(e)}")
 
     @staticmethod
     async def get_camera_infos_with_condition(
@@ -250,11 +281,13 @@ class CameraInfoService:
 
             def connection_task():
                 try:
-                    camera_info = get_camera_info(db, camera_id)
-                    if not camera_info:
+                    camera_info_result = get_camera_info(db, camera_id)
+                    if not camera_info_result:
                         result_container['result'] = Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
                         return
 
+                    # 从元组中提取CameraInfoDB对象
+                    camera_info = camera_info_result[0]  # CameraInfoDB instance
                     cap = cv2.VideoCapture(camera_info.rtsp_url)
                     cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 3000)
                     cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 3000)

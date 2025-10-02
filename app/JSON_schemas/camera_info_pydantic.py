@@ -34,6 +34,20 @@ class CameraInfoResponse(BaseModel):
             }
         }
 
+class CameraStatusReport(BaseModel):
+    online_count: int
+    total_count: int
+    offline_count: int
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "online_count": 48,
+                "total_count": 50,
+                "offline_count": 2
+            }
+        }
+
 class CameraInfoPageResponse(BaseModel):
     total: int
     rows: List[CameraInfoResponse]

@@ -11,8 +11,8 @@ def get_park_area(db: Session, park_area_id: int) -> Optional[ParkAreaDB]:
     根据ID获取园区区域信息
 
     Args:
-        db: 数据库会话
-        park_area_id: 园区区域ID
+        db (Session): 数据库会话
+        park_area_id (int): 园区区域ID
 
     Returns:
         Optional[ParkAreaDB]: 园区区域信息或None
@@ -25,8 +25,8 @@ def get_park_area_by_name(db: Session, park_area: str) -> Optional[ParkAreaDB]:
     根据名称获取园区区域信息
 
     Args:
-        db: 数据库会话
-        park_area: 园区区域名称
+        db (Session): 数据库会话
+        park_area (str): 园区区域名称
 
     Returns:
         Optional[ParkAreaDB]: 园区区域信息或None
@@ -44,13 +44,13 @@ def get_park_areas_with_condition(
     根据条件获取园区区域信息列表（支持分页）
 
     Args:
-        db: 数据库会话
-        park_area: 园区区域名称（模糊查询）
-        skip: 跳过的记录数
-        limit: 限制返回的记录数
+        db (Session): 数据库会话
+        park_area (Optional[str]): 园区区域名称（模糊查询）
+        skip (int): 跳过的记录数，默认为0
+        limit (int): 限制返回的记录数，默认为10
 
     Returns:
-        List[ParkAreaDB]: 园区区域信息列表
+        tuple: (总数, 园区区域信息列表)
     """
     query = db.query(ParkAreaDB)
 
@@ -66,8 +66,8 @@ def create_park_area(db: Session, park_area: ParkAreaCreate) -> ParkAreaDB:
     创建新的园区区域信息
 
     Args:
-        db: 数据库会话
-        park_area: 园区区域创建数据
+        db (Session): 数据库会话
+        park_area (ParkAreaCreate): 园区区域创建数据
 
     Returns:
         ParkAreaDB: 新创建的园区区域信息
@@ -90,9 +90,9 @@ def update_park_area(
     根据 ID 修改园区区域信息
 
     Args:
-        db: 数据库会话
-        park_area_id: 园区区域ID
-        park_area_update: 园区区域更新数据
+        db (Session): 数据库会话
+        park_area_id (int): 园区区域ID
+        park_area_update (ParkAreaUpdate): 园区区域更新数据
 
     Returns:
         Optional[ParkAreaDB]: 更新后的园区区域信息或None（如果未找到）
@@ -121,8 +121,8 @@ def delete_park_areas(db: Session, park_area_ids: List[int]) -> int:
     批量删除园区区域信息
 
     Args:
-        db: 数据库会话
-        park_area_ids: 园区区域ID列表
+        db (Session): 数据库会话
+        park_area_ids (List[int]): 园区区域ID列表
 
     Returns:
         int: 成功删除的记录数
