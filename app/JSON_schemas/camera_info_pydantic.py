@@ -101,3 +101,4 @@ class CameraInfoUpdate(BaseModel):
     install_position: Optional[str] = Field(None, min_length=1, max_length=64)
     rtsp_url: Optional[str] = Field(None, min_length=1, max_length=255)
     analysis_mode: Optional[int] = Field(None, ge=0, le=4)
+    camera_status: Optional[int] = Field(None, ge=0, le=2, description="摄像头状态: 0-离线, 1-在线但未开启安防检测, 2-在线且安防检测中")

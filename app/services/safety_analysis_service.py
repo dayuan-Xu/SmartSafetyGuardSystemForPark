@@ -5,7 +5,8 @@ import cv2
 from sqlalchemy.orm import Session
 from app.JSON_schemas.Result_pydantic import Result
 from app.crud.alarm_crud import update_alarm_end_time, create_alarm
-from app.crud.camera_crud import get_camera_info
+from app.crud.camera_crud import get_camera_info, update_camera_info
+from app.JSON_schemas.camera_info_pydantic import CameraInfoUpdate
 from app.objects.alarm_case import AlarmCase
 from app.objects.alarm_case_tracker import DebouncedAlarmCaseTracker
 from app.services.alarm_broadcast_service import sync_broadcast_alarm
@@ -143,8 +144,10 @@ class SafetyAnalysisService:
         thread_name=threading.current_thread().name
         logger.info(f"安防分析线程已启动，线程名：{thread_name}")
         frame_count = 0
-        cap = cv2.VideoCapture(rtsp_url)
         try:
+            cap = cv2.VideoCapture(rtsp_url)
+            if not cap.isOpened():
+                raise RuntimeError(f"无法打开摄像头 {camera_id}")
             while cap.isOpened():
                 # 检查停止信号（优先判断，确保及时退出）
                 if cls.thread_stop_flags.get(thread_name, True):
@@ -187,6 +190,16 @@ class SafetyAnalysisService:
                 del cls.active_threads[thread_name]
             if thread_name in cls.thread_stop_flags:
                 del cls.thread_stop_flags[thread_name]
+            
+            # 当线程异常退出时，更新摄像头状态为"在线但未开启安防检测"(值为1)
+            try:
+                from app.JSON_schemas.camera_info_pydantic import CameraInfoUpdate
+                camera_update = CameraInfoUpdate(camera_status=1)
+                update_camera_info(db, camera_id, camera_update)
+                logger.info(f"分析结束，摄像头 {camera_id} 状态已更新为在线但未开启安防检测")
+            except Exception as update_error:
+                logger.error(f"更新摄像头 {camera_id} 状态时出错: {str(update_error)}")
+            
             logger.info(f"{thread_name} 已停止：处理帧 {frame_count} 帧")
 
 
@@ -222,29 +235,29 @@ class SafetyAnalysisService:
             
             # 从联表查询结果中提取摄像头信息
             camera_info = camera_info_result[0]  # CameraInfoDB instance
-
-            analysis_mode = camera_info.analysis_mode or 2
-
-            # 测试时，服务器本地视频充当实时视频流
-            project_root = Path(__file__).parent.parent.parent
-            if analysis_mode == 4:
-                rtsp_url = project_root / 'app' / 'test_videos' / "fire_smoke.mp4"
-            elif  analysis_mode == 3:
-                rtsp_url = project_root / 'app' / 'test_videos' / "person_vehicle.mp4"
-            elif analysis_mode == 2:
-                rtsp_url = project_root / 'app' / 'test_videos' / "helmet_vest.mp4"
-            elif analysis_mode == 1:
-                rtsp_url = project_root / 'app' / 'test_videos' / "all.mp4"
+            analysis_mode = camera_info.analysis_mode
+            camera_status = camera_info.camera_status
+            if analysis_mode not in [0,1,2,3,4]:
+                return Result.ERROR(f"摄像头 {camera_id} 的分析模式无效")
+            elif camera_status != 1:
+                return Result.ERROR(f"摄像头 {camera_id} 的状态无效")
             else:
-                return Result.ERROR(f"当前摄像头: {camera_info.camera_name} 未指定分析模式，无法开启实时分析!")
+                rtsp_url = camera_info.rtsp_url
+                if rtsp_url is None:
+                    return Result.ERROR(f"未找到摄像头: {camera_info.camera_name} 的视频流URL，无法开启实时分析")
+                if rtsp_url.startswith("local:"):# 测试时，服务器本地视频充当实时视频流
+                    file_name=rtsp_url[6:]
+                    project_root = Path(__file__).parent.parent.parent
+                    rtsp_url = project_root / 'app' / 'test_videos' / file_name
 
-            logger.info(f"开启安防分析，视频流URL：{rtsp_url}, 分析模式：{cls.analysis_mode_descs[analysis_mode]}")
+                logger.info(f"开启安防分析，视频流URL：{rtsp_url}, 分析模式：{cls.analysis_mode_descs[analysis_mode]}")
 
-            # 启动分析线程
-            if rtsp_url is None:
-                return Result.ERROR(f"未找到摄像头: {camera_info.camera_name} 的视频流URL，无法开启实时分析")
-            else:
+                # 启动分析线程
                 thread_name = cls.start_thread(camera_id, rtsp_url, analysis_mode, db)
+
+                # 更新摄像头状态为"在线且安防检测中"(值为2)
+                camera_update = CameraInfoUpdate(camera_status=2)
+                update_camera_info(db, camera_id, camera_update)
 
                 result_data = {
                     "camera_id": camera_id,
@@ -283,6 +296,10 @@ class SafetyAnalysisService:
             analysis_mode = camera_info.analysis_mode or 2
 
             thread_name = cls.stop_thread(camera_id, analysis_mode)
+            
+            # 更新摄像头状态为"在线但未开启安防检测"(值为1)
+            camera_update = CameraInfoUpdate(camera_status=1)
+            update_camera_info(db, camera_id, camera_update)
 
             result_data = {
                 "camera_id": camera_id,
