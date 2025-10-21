@@ -68,7 +68,14 @@ class SignInOrUpService:
                 user_data['password'] = get_password_hash(user.password)
 
                 # 补全相较于UserCreate缺少的字段
-                user_data.update({'name':'待定', 'gender': 1, 'user_role': 0, 'phone': user.phone})
+                user_data.update(
+                    {
+                     'name':'待定',
+                     'gender': 1,
+                     'user_role': 0,
+                     'phone': user.phone
+                    }
+                )
 
                 # 创建该用户
                 userDB = create_user(db, UserCreate(**user_data))

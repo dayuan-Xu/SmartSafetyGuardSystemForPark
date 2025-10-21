@@ -14,6 +14,7 @@ from app.crud.user_crud import (
 )
 from app.services.thread_pool_manager import executor as db_executor
 from app.utils.logger import get_logger
+from app.utils.password_utils import get_password_hash
 
 logger=get_logger()
 class UserService:
@@ -90,6 +91,9 @@ class UserService:
                 existing_user = db.query(UserDB).filter(UserDB.user_name == user_create.user_name).first()
                 if existing_user:
                     return Result.ERROR(msg=f"用户名已存在: Username '{user_create.user_name}' already exists")
+
+                # 哈希化明文密码
+                user_create.password = get_password_hash(user_create.password)
 
                 # 创建新用户对象
                 created_user = crud_create_user(db, user_create)

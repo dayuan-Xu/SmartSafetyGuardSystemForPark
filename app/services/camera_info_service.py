@@ -1,5 +1,6 @@
 import asyncio
 import threading
+from pathlib import Path
 from typing import Optional
 
 import cv2
@@ -306,14 +307,25 @@ class CameraInfoService:
 
             def connection_task():
                 try:
-                    camera_info_result = get_camera_info(db, camera_id)
-                    if not camera_info_result:
+                    camera_info_result0 = get_camera_info(db, camera_id)
+                    if not camera_info_result0:
                         result_container['result'] = Result.ERROR(f"未找到ID为 {camera_id} 的摄像头信息")
                         return
 
                     # 从元组中提取CameraInfoDB对象
-                    camera_info = camera_info_result[0]  # CameraInfoDB instance
-                    cap = cv2.VideoCapture(camera_info.rtsp_url)
+                    camera_info0 = camera_info_result0[0]  # CameraInfoDB instance
+                    rtsp_url = camera_info0.rtsp_url
+
+                    if rtsp_url.startswith("local:"):# 测试时，服务器本地视频充当实时视频流
+                        file_name = rtsp_url[6:]
+                        project_root = Path(__file__).parent.parent.parent
+                        rtsp_url = project_root / 'app' / 'test_videos' / file_name
+                        # 检查该文件是否存在
+                        if not rtsp_url.exists():
+                            result_container['result'] = Result.ERROR(f"本地测试视频文件 {rtsp_url} 不存在，无法进行连接测试")
+                            return
+
+                    cap = cv2.VideoCapture(rtsp_url)
                     cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 3000)
                     cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 3000)
 

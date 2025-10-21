@@ -112,7 +112,7 @@ def get_alarms_with_condition(
         )
     ).outerjoin(
         UserDB, AlarmHandleRecordDB.handler_user_id == UserDB.user_id
-    )
+    ).order_by(AlarmDB.alarm_time.desc())  # 按告警触发时间降序排列
 
     # 添加时间范围条件
     if start_time and end_time:

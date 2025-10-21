@@ -144,14 +144,15 @@ class SafetyAnalysisService:
         thread_name=threading.current_thread().name
         logger.info(f"安防分析线程已启动，线程名：{thread_name}")
         frame_count = 0
+        read_failure_count = 0
         try:
             cap = cv2.VideoCapture(rtsp_url)
             if not cap.isOpened():
-                raise RuntimeError(f"无法打开摄像头 {camera_id}")
+                raise RuntimeError(f"{thread_name} 无法打开摄像头 {camera_id}")
             while cap.isOpened():
                 # 检查停止信号（优先判断，确保及时退出）
                 if cls.thread_stop_flags.get(thread_name, True):
-                    logger.info(f"收到停止信号，停止{thread_name}")
+                    logger.info(f"收到停止信号，停止线程: {thread_name}")
                     break
                 ret, frame=cap.read()
                 if ret:
@@ -159,6 +160,8 @@ class SafetyAnalysisService:
                     if frame_count==2147483647:
                         frame_count = 0
                         logger.info("已处理2147483647帧，现重置frame_count为0")
+                    if read_failure_count>0:
+                        logger.info(f"已连续{read_failure_count}次读取失败，现重置read_failure_count为0")
 
                     if analysis_mode>=2: # 只分析一种告警场景
                         alarm_type = analysis_mode - 2
@@ -178,7 +181,11 @@ class SafetyAnalysisService:
                                 # 处理本次状态分析结果
                                 cls.handle_state_result_v2(state_result, camera_id, alarm_type, alarm_case_source, annotated_frames, db)
                 else:
-                    logger.info(f"{thread_name}本次获取视频帧失败")
+                    logger.info(f"{thread_name} 本次获取视频帧（监控帧）失败")
+                    read_failure_count += 1
+                    if read_failure_count >= 5:
+                        logger.info(f"{thread_name} 连续5次获取视频帧（监控帧）失败，已退出")
+                        raise RuntimeError(f"{thread_name} 连续5次获取视频帧（监控帧）失败，已退出")
 
         except Exception as e:
             logger.error(f"{thread_name} 内出现异常：{str(e)}")
@@ -196,7 +203,7 @@ class SafetyAnalysisService:
                 from app.JSON_schemas.camera_info_pydantic import CameraInfoUpdate
                 camera_update = CameraInfoUpdate(camera_status=1)
                 update_camera_info(db, camera_id, camera_update)
-                logger.info(f"分析结束，摄像头 {camera_id} 状态已更新为在线但未开启安防检测")
+                logger.info(f"分析结束, 摄像头ID: {camera_id}）, 状态已更新为在线但未开启安防检测")
             except Exception as update_error:
                 logger.error(f"更新摄像头 {camera_id} 状态时出错: {str(update_error)}")
             

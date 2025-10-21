@@ -66,7 +66,7 @@ def get_all_users(db: Session, skip: int = 0, limit: int = 10,
     
     return query.offset(skip).limit(limit).all()
 
-def create_user(db: Session, user: UserCreate) -> UserDB:
+def create_user(db: Session, user: UserCreate) -> Optional[UserDB]:
     """
     创建新用户
 
@@ -78,8 +78,6 @@ def create_user(db: Session, user: UserCreate) -> UserDB:
         UserDB: 新创建的用户对象
     """
     # 1. 将 Pydantic 模型（UserCreate）转成 SQLAlchemy 模型（UserDB）
-    if user.password:
-        user.password = get_password_hash(user.password)
     db_user = UserDB(**user.model_dump())
     # 2. 提交到数据库
     db.add(db_user)
