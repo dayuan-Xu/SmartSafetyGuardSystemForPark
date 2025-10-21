@@ -4,7 +4,7 @@ from typing import Literal, Dict
 import cv2
 from sqlalchemy.orm import Session
 from app.JSON_schemas.Result_pydantic import Result
-from app.crud.alarm_crud import update_alarm_end_time, create_alarm
+from app.crud.alarm_crud import update_alarm_end_time, create_alarm, get_alarm_by_id
 from app.crud.camera_crud import get_camera_info, update_camera_info
 from app.JSON_schemas.camera_info_pydantic import CameraInfoUpdate
 from app.objects.alarm_case import AlarmCase
@@ -358,6 +358,14 @@ class SafetyAnalysisService:
                             alarm_end_time=get_now()
                         )
                         logger.info(f"摄像头 {camera_id} 更新告警（ID：{state_result['alarm_id']}）")
+                        
+                        # 获取更新后的告警记录并广播
+                        alarm = get_alarm_by_id(db, state_result["alarm_id"])
+                        if alarm:
+                            sync_broadcast_alarm(alarm)
+                            logger.info(f"已广播告警结束消息: Alarm ID={alarm.alarm_id}")
+                        else:
+                            logger.error(f"无法获取告警记录: Alarm ID={state_result['alarm_id']}")
                     except Exception as e:
                         logger.error(f"更新告警结束时间时发生错误: {e}")
 
@@ -413,6 +421,14 @@ class SafetyAnalysisService:
                             alarm_end_time=get_now()
                         )
                         logger.info(f"摄像头 {camera_id} 更新告警（ID：{state_result['alarm_id']}）")
+                        
+                        # 获取更新后的告警记录并广播
+                        alarm = get_alarm_by_id(db, state_result["alarm_id"])
+                        if alarm:
+                            sync_broadcast_alarm(alarm)
+                            logger.info(f"已广播告警结束消息: Alarm ID={alarm.alarm_id}")
+                        else:
+                            logger.error(f"无法获取告警记录: Alarm ID={state_result['alarm_id']}")
                     except Exception as e:
                         logger.error(f"更新告警结束时间时发生错误: {e}")
 
