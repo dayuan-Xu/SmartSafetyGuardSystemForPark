@@ -8,8 +8,8 @@ import pytz
 from pathlib import Path
 
 # 阿里云OSS配置
-OSS_ACCESS_KEY_ID = os.getenv('OSS_ACCESS_KEY_ID')
-OSS_ACCESS_KEY_SECRET = os.getenv('OSS_ACCESS_KEY_SECRET')
+OSS_ACCESS_KEY_ID = os.getenv('ALI_OSS_ACCESS_KEY_ID')
+OSS_ACCESS_KEY_SECRET = os.getenv('ALI_OSS_ACCESS_KEY_SECRET')
 OSS_BUCKET_NAME = os.getenv('ALIYUN_OSS_BUCKET_NAME')
 OSS_ENDPOINT = os.getenv('ALIYUN_OSS_ENDPOINT')
 
@@ -71,19 +71,29 @@ def upload_file_on_OSS(content, object_key):
     返回:
     文件的URL
     """
-    # 创建认证对象
-    auth = oss2.Auth(OSS_ACCESS_KEY_ID, OSS_ACCESS_KEY_SECRET)
+    # 检查必要配置是否存在
+    if not OSS_ACCESS_KEY_ID or not OSS_ACCESS_KEY_SECRET or not OSS_BUCKET_NAME or not OSS_ENDPOINT:
+        raise ValueError("OSS配置不完整，请检查环境变量设置")
+    
+    try:
+        # 创建认证对象
+        auth = oss2.Auth(OSS_ACCESS_KEY_ID, OSS_ACCESS_KEY_SECRET)
 
-    # 创建Bucket对象
-    bucket = oss2.Bucket(auth, OSS_ENDPOINT, OSS_BUCKET_NAME)
+        # 创建Bucket对象
+        bucket = oss2.Bucket(auth, OSS_ENDPOINT, OSS_BUCKET_NAME)
 
-    # 上传文件
-    bucket.put_object(object_key, content)
+        # 上传文件
+        bucket.put_object(object_key, content)
 
-    # 构造文件URL，使用标准的URL格式
-    file_url = f"https://{OSS_BUCKET_NAME}.{OSS_ENDPOINT.replace('http://', '').replace('https://', '')}/{object_key}"
+        # 构造文件URL，使用标准的URL格式
+        file_url = f"https://{OSS_BUCKET_NAME}.{OSS_ENDPOINT.replace('http://', '').replace('https://', '')}/{object_key}"
 
-    return file_url
+        return file_url
+    except Exception as e:
+        # 记录详细的错误信息
+        import logging
+        logging.error(f"上传文件到OSS失败: {str(e)}")
+        raise RuntimeError("上传文件到OSS失败")
 
 if __name__ == '__main__':
     print(get_now_str())

@@ -4,6 +4,7 @@ from datetime import datetime
 import cv2
 from dotenv import load_dotenv
 
+from app.utils.logger import get_logger
 from app.utils.oss_utils import upload_file_on_OSS, get_now_str, generate_unique_object_name
 
 load_dotenv()
@@ -29,12 +30,18 @@ class StorageService:
     @staticmethod
     def upload_alarm_snapshot(annotated_frame, camera_id):
         """上传告警截图到云存储"""
-        _, buffer = cv2.imencode('.jpg', annotated_frame)
-        frame_bytes = buffer.tobytes()
-        img_name = f"{camera_id}_{get_now_str()}.jpg"
-        object_key= generate_unique_object_name(img_name)
-        file_url = upload_file_on_OSS(frame_bytes, object_key)
-        return file_url
+        try:
+            _, buffer = cv2.imencode('.jpg', annotated_frame)
+            frame_bytes = buffer.tobytes()
+            img_name = f"{camera_id}_{get_now_str()}.jpg"
+            object_key= generate_unique_object_name(img_name)
+            file_url = upload_file_on_OSS(frame_bytes, object_key)
+            return file_url
+        except Exception as e:
+            # 记录错误日志，方便调试
+            logger = get_logger()
+            logger.error(f"上传告警截图失败: {str(e)}")
+            raise
 
     @classmethod
     def upload_alarm_attachment(cls, file_content: str, file_extension: str) -> str:

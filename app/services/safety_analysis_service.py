@@ -157,6 +157,7 @@ class SafetyAnalysisService:
                 ret, frame=cap.read()
                 if ret:
                     frame_count += 1
+                    # logger.info(f"已处理帧数:{frame_count}")
                     if frame_count==2147483647:
                         frame_count = 0
                         logger.info("已处理2147483647帧，现重置frame_count为0")
@@ -165,7 +166,7 @@ class SafetyAnalysisService:
 
                     if analysis_mode>=2: # 只分析一种告警场景
                         alarm_type = analysis_mode - 2
-                        alarm_case_detected,annotated_frames = DetectionService.detect_alarm_case(frame,alarm_type)
+                        alarm_case_detected, annotated_frames = DetectionService.detect_alarm_case(frame,alarm_type)
                         if alarm_case_detected is not None:
                             alarm_case_source = f"{camera_id}_{alarm_type}"
                             state_result = cls.alarm_tracker.update_state(alarm_case_source, alarm_case_detected)
@@ -184,8 +185,7 @@ class SafetyAnalysisService:
                     logger.info(f"{thread_name} 本次获取视频帧（监控帧）失败")
                     read_failure_count += 1
                     if read_failure_count >= 5:
-                        logger.info(f"{thread_name} 连续5次获取视频帧（监控帧）失败，已退出")
-                        raise RuntimeError(f"{thread_name} 连续5次获取视频帧（监控帧）失败，已退出")
+                        raise RuntimeError(f"{thread_name} 连续5次获取视频帧（监控帧）失败, 停止循环读取下一帧")
 
         except Exception as e:
             logger.error(f"{thread_name} 内出现异常：{str(e)}")
@@ -203,7 +203,7 @@ class SafetyAnalysisService:
                 from app.JSON_schemas.camera_info_pydantic import CameraInfoUpdate
                 camera_update = CameraInfoUpdate(camera_status=1)
                 update_camera_info(db, camera_id, camera_update)
-                logger.info(f"分析结束, 摄像头ID: {camera_id}）, 状态已更新为在线但未开启安防检测")
+                logger.info(f"分析结束, 摄像头ID: {camera_id}, 状态已更新为在线但未开启安防检测")
             except Exception as update_error:
                 logger.error(f"更新摄像头 {camera_id} 状态时出错: {str(update_error)}")
             
@@ -368,18 +368,24 @@ class SafetyAnalysisService:
         state_changed = state_result["state_changed"]
         change_type = state_result["change_type"]
         if state_changed:
+            logger.info(f"当前状态变化：{change_type}")
             if change_type == "normal_to_violation":
                 # 完全异步处理：保存截图、创建告警、广播告警都在后台线程执行
                 def process_alarm_async():
                     try:
                         snapshot_urls="" # 包含本次告警的所有经过标注的帧的url
+                        # print(f"待上传的截图数量为{len(annotated_frames)}")
                         for i,annotated_frame in enumerate(annotated_frames):
-                            # 保存截图到云OSS并获取URL
-                            snapshot_url = StorageService.upload_alarm_snapshot(annotated_frame, camera_id)
-                            snapshot_urls+=snapshot_url
-                            if i > 0:
-                                snapshot_urls+=','
-                            logger.info(f"已经保存告警截图到云OSS，访问URL: {snapshot_url}")
+                            try:
+                                # 保存截图到云OSS并获取URL
+                                snapshot_url = StorageService.upload_alarm_snapshot(annotated_frame, camera_id)
+                                snapshot_urls+=snapshot_url
+                                if i > 0:
+                                    snapshot_urls+=','
+                                logger.info(f"已经保存告警截图到云OSS，访问URL: {snapshot_url}")
+                            except Exception as e:
+                                logger.error(f"上传单个告警截图失败: {str(e)}")
+                                # 可以选择继续处理其他帧或者直接抛出异常
 
                         # 创建告警记录
                         alarm = create_alarm(db, camera_id, alarm_type, 0, get_now(), snapshot_urls)

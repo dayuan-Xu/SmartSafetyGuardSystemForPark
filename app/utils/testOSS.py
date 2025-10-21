@@ -7,10 +7,13 @@ import datetime
 load_dotenv()
 
 # 阿里云OSS配置
-OSS_ACCESS_KEY_ID = os.getenv('OSS_ACCESS_KEY_ID')
-OSS_ACCESS_KEY_SECRET = os.getenv('OSS_ACCESS_KEY_SECRET')
+OSS_ACCESS_KEY_ID = os.getenv('ALI_OSS_ACCESS_KEY_ID')
+OSS_ACCESS_KEY_SECRET = os.getenv('ALI_OSS_ACCESS_KEY_SECRET')
 OSS_BUCKET_NAME = os.getenv('ALIYUN_OSS_BUCKET_NAME')
 OSS_ENDPOINT = os.getenv('ALIYUN_OSS_ENDPOINT')
+# 打印配置信息
+print(f"OSS_ACCESS_KEY_ID: {OSS_ACCESS_KEY_ID}")
+print(f"OSS_ACCESS_KEY_SECRET: {OSS_ACCESS_KEY_SECRET}")
 
 def upload_img_to_OSS(content, object_key, access_key_id, access_key_secret, bucket_name, endpoint):
     """

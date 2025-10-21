@@ -44,7 +44,7 @@ class DetectionService:
     fire_smoke_model = YOLO(fire_smoke_model_path)  # 火焰烟雾检测模型
 
     @classmethod
-    def detect_alarm_case(cls,frame, alarm_case_code):
+    def detect_alarm_case(cls, frame, alarm_case_code):
         if alarm_case_code==0:
             # logger.info("本次帧分析的目标告警场景：安全规范（是否佩戴安全帽、是否穿戴反光衣）")
 
@@ -65,7 +65,11 @@ class DetectionService:
                     no_vest_detected=True
 
             if head_detected or no_vest_detected:
-                annotated_frames=[helmet_result.plot(),vest_result.plot()]
+                annotated_frames=[]
+                if head_detected:
+                    annotated_frames.append(helmet_result.plot())
+                if no_vest_detected:
+                    annotated_frames.append(vest_result.plot())
                 return True, annotated_frames
             else:
                 return False, []
