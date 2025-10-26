@@ -107,7 +107,7 @@ def update_park_area(
     for key, value in update_data.items():
         setattr(db_park_area, key, value)
 
-    # 更新时间自动更新（ благодаря onupdate ）
+    # 更新时间自动更新
     db_park_area.update_time = datetime.now()
 
     # 提交修改

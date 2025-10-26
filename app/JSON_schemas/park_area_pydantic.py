@@ -6,6 +6,7 @@ from typing import Optional, List
 class ParkAreaResponse(BaseModel):
     park_area_id: int
     park_area: str
+    remark: Optional[str] = None
     create_time: datetime
     update_time: datetime
 
@@ -16,6 +17,7 @@ class ParkAreaResponse(BaseModel):
             "example": {
                 "park_area_id": 1,
                 "park_area": "东区",
+                "remark": "这是东区的备注信息",
                 "create_time": "2023-01-01T10:00:00",
                 "update_time": "2023-01-01T10:00:00"
             }
@@ -34,12 +36,14 @@ class ParkAreaPageResponse(BaseModel):
                     {
                         "park_area_id": 1,
                         "park_area": "东区",
+                        "remark": "这是东区的备注信息",
                         "create_time": "2023-01-01T10:00:00",
                         "update_time": "2023-01-01T10:00:00"
                     },
                     {
                         "park_area_id": 2,
                         "park_area": "西区",
+                        "remark": "这是西区的备注信息",
                         "create_time": "2023-01-01T11:00:00",
                         "update_time": "2023-01-01T11:00:00"
                     }
@@ -50,6 +54,8 @@ class ParkAreaPageResponse(BaseModel):
 # ------------------- 请求模型（前端传数据的格式校验）-------------------
 class ParkAreaCreate(BaseModel):
     park_area: str = Field(..., min_length=1, max_length=64, description="园区区域名称")
+    remark: Optional[str] = Field(None, max_length=255, description="园区区域备注")
 
 class ParkAreaUpdate(BaseModel):
     park_area: Optional[str] = Field(None, min_length=1, max_length=64, description="园区区域名称")
+    remark: Optional[str] = Field(None, max_length=255, description="园区区域备注")
