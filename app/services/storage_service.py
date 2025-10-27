@@ -1,14 +1,12 @@
 import base64
 import os
 from datetime import datetime
+from pathlib import Path
 import cv2
-from dotenv import load_dotenv
-
 from app.utils.logger import get_logger
 from app.utils.oss_utils import upload_file_on_OSS, get_now_str, generate_unique_object_name
-
-load_dotenv()
-SNAPSHOT_PATH = os.getenv('SNAPSHOT_PATH')
+project_root = Path(__file__).parent.parent.parent
+SNAPSHOT_PATH = project_root / 'app' / 'snapshots'
 
 # 确保截图目录存在
 os.makedirs(SNAPSHOT_PATH, exist_ok=True)

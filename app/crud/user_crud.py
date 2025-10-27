@@ -31,7 +31,7 @@ def get_user(db: Session, user_id: int) -> Optional[UserDB]:
 
 def get_all_users(db: Session, skip: int = 0, limit: int = 10, 
                  name: str = None, gender: int = None,
-                 start_time: str = None, end_time: str = None) -> List[UserDB]:
+                 start_time: str = None, end_time: str = None):
     """
     获取所有用户信息（支持分页和筛选）
 
@@ -45,7 +45,7 @@ def get_all_users(db: Session, skip: int = 0, limit: int = 10,
         end_time (str): 入职时间结束时间
 
     Returns:
-        List[UserDB]: 用户信息列表
+        tuple: (总数, 用户信息列表)
     """
     query = db.query(UserDB)
     
@@ -64,7 +64,10 @@ def get_all_users(db: Session, skip: int = 0, limit: int = 10,
     if end_time:
         query = query.filter(UserDB.create_time <= end_time)
     
-    return query.offset(skip).limit(limit).all()
+    # 返回计数和分页结果
+    count = query.count()
+    users = query.offset(skip).limit(limit).all()
+    return count, users
 
 def create_user(db: Session, user: UserCreate) -> Optional[UserDB]:
     """

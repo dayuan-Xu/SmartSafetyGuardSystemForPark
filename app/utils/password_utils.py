@@ -23,6 +23,17 @@ def verify_password(plain_password, hashed_password):
     """
     return pwd_context.verify(plain_password, hashed_password)
 
+def get_hashed_password(password):
+    """
+    获取密码的哈希值
+
+    Args:
+        password: 明文密码
+
+    Returns:
+        str: 哈希密码（明文密码加盐后的哈希值，注意这里并不是把密码加密，而是不可逆的密码哈希）
+    """
+    return get_password_hash(password)
 
 def get_password_hash(password):
     """

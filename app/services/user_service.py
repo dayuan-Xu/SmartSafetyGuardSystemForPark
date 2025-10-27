@@ -63,10 +63,9 @@ class UserService:
         """
         try:
             # 使用线程池执行数据库操作
-            users = await asyncio.get_event_loop().run_in_executor(
+            total, users = await asyncio.get_event_loop().run_in_executor(
                 db_executor, crud_get_all_users, db, skip, limit, name, gender, start_time, end_time
             )
-            total=len(users)
             users = UserPageResult(total=total, rows=users)
             return Result.SUCCESS(data=users, msg="获取用户列表成功")
         except Exception as e:

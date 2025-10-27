@@ -35,87 +35,34 @@ except ValueError as e:
 print("\n--- 自定义验证详解 ---")
 print("自定义验证不仅仅是类型注释和默认值，还包括：")
 
-
-# 演示自定义验证的完整示例
-class UserWithValidation(BaseModel):
+# 更复杂的验证示例
+class UserProfile(BaseModel):
     username: str
-    email: str
     age: int
-    password: str
+    email: str
 
-    # 验证用户名长度
-    @field_validator('username')
-    def validate_username(cls, v):
-        if len(v) < 3:
-            raise ValueError('用户名长度至少为3个字符')
-        if len(v) > 20:
-            raise ValueError('用户名长度不能超过20个字符')
+    @field_validator('age')
+    def validate_age(cls, v):
+        if v < 0 or v > 150:
+            raise ValueError('年龄必须在 0-150 之间')
         return v
 
-    # 验证邮箱格式
     @field_validator('email')
     def validate_email(cls, v):
         if '@' not in v:
             raise ValueError('邮箱格式不正确')
         return v
 
-    # 验证年龄范围
-    @field_validator('age')
-    def validate_age(cls, v):
-        if v < 0:
-            raise ValueError('年龄不能为负数')
-        if v > 150:
-            raise ValueError('年龄不能超过150岁')
-        return v
-
-    # 验证密码强度
-    @field_validator('password')
-    def validate_password(cls, v):
-        if len(v) < 8:
-            raise ValueError('密码长度至少为8个字符')
-        if not any(c.isupper() for c in v):
-            raise ValueError('密码必须包含至少一个大写字母')
-        if not any(c.islower() for c in v):
-            raise ValueError('密码必须包含至少一个小写字母')
-        if not any(c.isdigit() for c in v):
-            raise ValueError('密码必须包含至少一个数字')
-        return v
-
-
-# 测试自定义验证
+# 使用验证器
 try:
-    user = UserWithValidation(
-        username="jo",  # 太短
-        email="invalid-email",  # 格式错误
-        age=200,  # 超过范围
-        password="123"  # 太简单
-    )
-except ValueError as e:
-    print(f"验证错误: {e}")
-
-# 正确的用户数据
-try:
-    valid_user = UserWithValidation(
-        username="johndoe",
-        email="john@example.com",
-        age=25,
-        password="MyPassword123"
-    )
-    print(f"验证通过的用户: {valid_user}")
+    profile = UserProfile(username="alice", age=25, email="alice@example.com")
+    print(f"有效的用户资料: {profile}")
 except ValueError as e:
     print(f"验证错误: {e}")
 
 # ---------------------------------------------------------------------------------------
 
-# 从字典创建模型
-user_data = {
-    "username": "alice",
-    "email": "alice@example.com",
-    "age": 28
-}
-user = User(**user_data)
-
-# 从 JSON 创建模型
+# JSON 序列化/反序列化
 json_data = '{"username": "charlie", "email": "charlie@example.com", "age": 35}'
 user = User.model_validate_json(json_data)
 print(f"从JSON创建的用户: {user}")

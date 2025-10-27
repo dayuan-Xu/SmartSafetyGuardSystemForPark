@@ -5,13 +5,12 @@ MYSQL_USER=root
 MYSQL_PASSWORD=your_password
 MYSQL_DATABASE=your_db_name
 
-# Redis配置
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_DB=0
+# 阿里云OSS配置
+OSS_ACCESS_KEY_ID=your_access_key_id
+OSS_ACCESS_KEY_SECRET=your_access_key_secret
+OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com or anything else
+OSS_BUCKET_NAME=your_bucket_name
 
-# 应用配置
-SNAPSHOT_PATH=./snapshots/  # 告警截图存储路径
 
 # 防抖时间配置（单位：秒）
 # 正常→违规的防抖窗口：确保是真实违规（如模型N秒内连续地检测到未戴安全帽）
@@ -19,8 +18,11 @@ DEBOUNCE_NORMAL_TO_VIOLATION = 1
 # 违规→正常的防抖窗口：确保是真实恢复（如模型N秒内连续地检测到已戴安全帽）
 DEBOUNCE_VIOLATION_TO_NORMAL = 2
 
-# 阿里云OSS配置
-OSS_ACCESS_KEY_ID=your_access_key_id
-OSS_ACCESS_KEY_SECRET=your_access_key_secret
-OSS_BUCKET_NAME=your_bucket_name
-OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
+# 安全配置（
+# SECRET_KEY的获取方式：
+#   import secrets
+#   print(secrets.token_hex(32))
+SECRET_KEY=da3178e5264bff377e57d669c7143baf0b37264ceb3b8a0e976a7636039e7bc6
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+

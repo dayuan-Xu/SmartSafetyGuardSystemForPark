@@ -1,17 +1,18 @@
 import base64
 import datetime
-import os
 import uuid
+
 import cv2
 import oss2
 import pytz
 from pathlib import Path
+from app.config.app_settings import settings
 
 # 阿里云OSS配置
-OSS_ACCESS_KEY_ID = os.getenv('ALI_OSS_ACCESS_KEY_ID')
-OSS_ACCESS_KEY_SECRET = os.getenv('ALI_OSS_ACCESS_KEY_SECRET')
-OSS_BUCKET_NAME = os.getenv('ALIYUN_OSS_BUCKET_NAME')
-OSS_ENDPOINT = os.getenv('ALIYUN_OSS_ENDPOINT')
+OSS_ACCESS_KEY_ID = settings.OSS_ACCESS_KEY_ID
+OSS_ACCESS_KEY_SECRET = settings.OSS_ACCESS_KEY_SECRET
+OSS_BUCKET_NAME = settings.OSS_BUCKET_NAME
+OSS_ENDPOINT = settings.OSS_ENDPOINT
 
 # 获取当前时间（东八区时间）
 def get_now():

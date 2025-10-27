@@ -5,19 +5,17 @@
 # 注册所有业务模块的路由；
 # 加载全局配置（如跨域、中间件）。
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from app.JSON_schemas.Result_pydantic import Result
-from app.api.v1.endpoints import park_area_router # 导入园区区域接口路由
-from app.api.v1.endpoints import alarm_handle_record_router # 导入报警记录接口路由
+from app.api.v1.endpoints import alarm_handle_record_router  # 导入报警记录接口路由
 from app.api.v1.endpoints import alarm_router  # 导入告警记录接口路由
 from app.api.v1.endpoints import camera_router  # 导入商品接口路由
+from app.api.v1.endpoints import park_area_router  # 导入园区区域接口路由
 from app.api.v1.endpoints import safety_analysis_router  # 导入安全分析路由
 from app.api.v1.endpoints import sign_in_or_up_router  # 导入注册登录接口路由
 from app.api.v1.endpoints import user_router  # 导入用户接口路由
+from app.middleware.jwt_middleware import JWTMiddleware
 from app.services.thread_pool_manager import shutdown_executor
-from app.utils.jwt_utils import verify_token
 from app.utils.logger import get_logger
 
 logger=get_logger()
@@ -52,26 +50,8 @@ app.add_middleware(
     allow_headers=["*"],    # 允许所有请求头
 )
 
-
-# # 全局身份验证中间件
-# @app.middleware("http")
-# async def auth_middleware(request: Request, call_next):
-#     # 排除不需要认证的路径
-#     if request.url.path in ["/", "/docs", "/openapi.json", "/api/v1/token", "/api/v1/register"]:
-#         response = await call_next(request)
-#         return response
-#
-#     # 从请求头获取token
-#     auth_header = request.headers.get("Authorization")
-#     if not auth_header or not auth_header.startswith("Bearer "):
-#         # 返回统一的错误响应格式
-#         result = Result.ERROR(msg="Authorization请求头缺失 or 该请求头内容格式不正确(正确格式：Bearer jwt)")
-#         return JSONResponse(
-#             status_code=401,
-#             content=result.model_dump()
-#         )
-#
-#     return response
+# # 添加 JWT 中间件
+# app.add_middleware(JWTMiddleware)
 
 # 注册路由（给接口加统一前缀 /api/v1，方便版本管理）
 # 这行代码的作用是：

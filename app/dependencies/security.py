@@ -1,62 +1,49 @@
 from typing import Annotated
-import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jwt.exceptions import InvalidTokenError
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from app.JSON_schemas.security_pydantic import TokenData, User
-from app.config.security_config import SECRET_KEY, ALGORITHM
-from app.crud.user_crud import get_user_by_username as crud_get_user_by_username
+from app.config.app_settings import settings
+from app.crud import user_crud
 from app.dependencies.db import get_db
 
-# 创建了一个 OAuth2 密码流的认证方案，本质上是一个特殊函数对象
-# 使用它进行依赖注入时，它能告诉 FastAPI 这个接口需要 Bearer Token 认证
-# 当请求到达时，FastAPI 会调用该对象自动从请求头中提取 Authorization: Bearer <token> 字段
-# 提取出的 token 字符串会被返回
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# 直接从settings获取安全配置
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
 
-async def get_current_user(
-    db: Annotated[Session, Depends(get_db)],
-    token: Annotated[str, Depends(oauth2_scheme)]
-):
-    """
-    获取当前用户
-    
-    Args:
-        db: 数据库会话
-        token: JWT令牌
-        
-    Returns:
-        User: 当前用户对象
-        
-    Raises:
-        HTTPException: 当令牌无效或用户不存在时
-    """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/sign_in_or_up/token")
+
+
+def verify_token(token: str, credentials_exception):
+    """验证JWT令牌"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
+        username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
-    except InvalidTokenError:
+    except JWTError:
         raise credentials_exception
-    
-    # 从数据库获取用户
-    db_user = crud_get_user_by_username(db, token_data.username)
-    if db_user is None:
-        raise credentials_exception
-    
-    return User(
-        username=db_user.user_name,
-        email=db_user.email,
-        full_name=db_user.full_name,
-        disabled=db_user.disabled
+    return token_data
+
+
+def get_current_user(
+        db: Session = Depends(get_db),
+        token: str = Depends(oauth2_scheme)
+):
+    """获取当前用户"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="无法验证凭据",
+        headers={"WWW-Authenticate": "Bearer"},
     )
+    token_data = verify_token(token, credentials_exception)
+    user = user_crud.get_user_by_username(db, token_data.username)
+    if user is None:
+        raise credentials_exception
+    return user
 
 
 async def get_current_active_user(

@@ -1,138 +1,125 @@
 import asyncio
 from datetime import timedelta
-from typing import Union
-from fastapi import HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.exc import IntegrityError as SQLIntegrityError
 from sqlalchemy.orm import Session
-from app.DB_models.user_db import UserDB
-from app.JSON_schemas.Result_pydantic import Result
-from app.JSON_schemas.security_pydantic import Token
-from app.JSON_schemas.user_pydantic import UserCreate, UserRegister
-from app.config.security_config import ACCESS_TOKEN_EXPIRE_MINUTES
+from app.config.app_settings import settings
 from app.crud.user_crud import get_user_by_username, create_user
-from app.services.thread_pool_manager import executor as db_executor
+from app.JSON_schemas.Result_pydantic import Result
+from app.JSON_schemas.user_pydantic import UserRegister, UserCreate
 from app.utils.jwt_utils import create_access_token
-from app.utils.logger import get_logger
-from app.utils.password_utils import verify_password, get_password_hash
+from app.utils.password_utils import verify_password, get_hashed_password
+from app.services.thread_pool_manager import executor
+from functools import partial
 
-logger=get_logger()
+
+# 直接从settings获取访问令牌过期时间
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+
 
 class SignInOrUpService:
     @staticmethod
-    def authenticate_user(db: Session, username: str, password: str) -> Union[UserDB, bool]:
+    async def login_for_access_token(form_data, db: Session) -> Result:
         """
-        验证用户密码是否和数据库种的哈希化密码一致
-
-        Args:
-            db: 数据库会话
-            username: 用户名
-            password: 密码
-
-        Returns:
-            UserInDB | bool: 用户对象或False
+        用户登录服务
+        :param form_data: 登录表单数据
+        :param db: 数据库会话
+        :return: 登录结果
         """
-        # 从数据库获取用户
-        db_user = get_user_by_username(db, username)
+        # 1. 检查用户是否存在
+        db_user = await asyncio.get_event_loop().run_in_executor(
+            executor, 
+            partial(get_user_by_username, db, form_data.username)
+        )
         if not db_user:
-            return False
+            return Result.ERROR("用户不存在")
 
-        # 验证密码
-        hashed_password = db_user.password
-        if not verify_password(password, hashed_password):
-            return False
+        # 2. 验证密码
+        password_valid = await asyncio.get_event_loop().run_in_executor(
+            executor,
+            partial(verify_password, form_data.password, db_user.password)
+        )
+        if not password_valid:
+            return Result.ERROR("密码错误")
 
-        return db_user
+        # 3. 生成JWT令牌
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = await asyncio.get_event_loop().run_in_executor(
+            executor,
+            partial(create_access_token, data={"sub": db_user.user_name}, expires_delta=access_token_expires)
+        )
 
-    @staticmethod
-    async def register_user(db: Session, user: UserRegister) -> Result[Token]:
-        """
-        用户注册功能
-
-        Args:
-            db (Session): 数据库会话
-            user (UserRegister): 用户注册请求模型
-
-        Returns:
-            Result: 包含新注册用户信息或错误信息的统一响应
-        """
-        try:
-            def _register_user():
-                # 检查用户名是否已存在
-                existing_user = get_user_by_username(db, user.user_name)
-                if existing_user:
-                    return Result.ERROR(msg=f"用户名已存在: Username '{user.user_name}' already exists")
-
-                # 对密码进行哈希处理
-                user_data = user.model_dump()
-                user_data['password'] = get_password_hash(user.password)
-
-                # 补全相较于UserCreate缺少的字段
-                user_data.update(
-                    {
-                     'name':'待定',
-                     'gender': 1,
-                     'user_role': 0,
-                     'phone': user.phone
-                    }
-                )
-
-                # 创建该用户
-                userDB = create_user(db, UserCreate(**user_data))
-
-                access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-                access_token = create_access_token(
-                    data={"sub": userDB.user_name}, expires_delta=access_token_expires
-                )
-                token_data = Token(access_token=access_token, token_type="bearer")
-                result = Result.SUCCESS(data=token_data, msg="注册成功")
-                return result
-
-            # 使用线程池执行数据库操作
-            return await asyncio.get_event_loop().run_in_executor(db_executor, _register_user)
-        except  SQLIntegrityError as e:
-            logger.error(f"用户注册失败: {str(e)}")
-            error_msg = str(e).lower()
-            if "duplicate entry" in error_msg:
-                return Result.ERROR(msg="注册失败，请更换用户名或手机号")
-        except Exception as e:
-            logger.error(f"用户注册失败: {str(e)}")
-            return Result.ERROR(msg=f"注册失败: {str(e)}")
-
+        # 4. 返回成功响应
+        return Result.SUCCESS({
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_info": {
+                "user_id": db_user.user_id,
+                "user_name": db_user.user_name,
+                "name": db_user.name,
+                "gender": db_user.gender,
+                "user_role": db_user.user_role,
+                "phone": db_user.phone,
+                "create_time": db_user.create_time,
+                "update_time": db_user.update_time
+            }
+        }, "登录成功")
 
     @staticmethod
-    async def login_for_access_token(
-        form_data: OAuth2PasswordRequestForm,
-        db: Session
-    ) -> Result[Token]:
+    async def register_user(db: Session, user: UserRegister) -> Result:
         """
-        用户登录获取访问令牌
-
-        Args:
-            form_data: OAuth2表单数据（用户名和密码）
-            db: 数据库会话
-
-        Returns:
-            Result[Token]: 包含访问令牌或错误信息的统一响应
+        用户注册服务
+        :param db: 数据库会话
+        :param user: 用户注册信息
+        :return: 注册结果
         """
+        # 1. 检查用户是否已存在
+        existing_user = await asyncio.get_event_loop().run_in_executor(
+            executor,
+            partial(get_user_by_username, db, user.user_name)
+        )
+        if existing_user:
+            return Result.ERROR("用户名已存在")
+
+        # 2. 创建新用户
+        hashed_password = await asyncio.get_event_loop().run_in_executor(
+            executor,
+            partial(get_hashed_password, user.password)
+        )
+        
+        # 将UserRegister转换为UserCreate
+        user_create_data = user.model_dump()
+        # 如果name字段不存在，使用user_name作为默认name
+        if 'name' not in user_create_data or not user_create_data['name']:
+            user_create_data['name'] = user_create_data['user_name']
+        user_create_data["password"] = hashed_password
+        user_create = UserCreate(**user_create_data)
+        
         try:
-            db_user = SignInOrUpService.authenticate_user(db, form_data.username, form_data.password)
-            if not db_user:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Incorrect username or password",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-            access_token = create_access_token(
-                data={"sub": db_user.user_name}, expires_delta=access_token_expires
+            db_user = await asyncio.get_event_loop().run_in_executor(
+                executor,
+                partial(create_user, db, user_create)
             )
-            token_data = Token(access_token=access_token, token_type="bearer")
-            result = Result.SUCCESS(data=token_data, msg="登录成功")
-            return result
-        except HTTPException as e:
-            result = Result.ERROR(msg=e.detail)
-            return result
+            
+            # 3. 生成JWT令牌
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = await asyncio.get_event_loop().run_in_executor(
+                executor,
+                partial(create_access_token, data={"sub": db_user.user_name}, expires_delta=access_token_expires)
+            )
+
+            # 4. 返回成功响应
+            return Result.SUCCESS({
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user_info": {
+                    "user_id": db_user.user_id,
+                    "user_name": db_user.user_name,
+                    "name": db_user.name,
+                    "gender": db_user.gender,
+                    "user_role": db_user.user_role,
+                    "phone": db_user.phone,
+                    "create_time": db_user.create_time,
+                    "update_time": db_user.update_time
+                }
+            }, "注册成功")
         except Exception as e:
-            result = Result.ERROR(msg=f"登录失败: {str(e)}")
-            return result
+            return Result.ERROR(f"注册失败: {str(e)}")
